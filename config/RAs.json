@@ -2,92 +2,140 @@
 	"https://www.edugain.org": {
 		"name": "eduGAIN",
 		"country_code": "",
-		"md_url": ["http://mds.edugain.org"]
+		"md_url": ["https://mds.edugain.org/edugain-v2.xml"],
+		"ta_url": "https://edugain.oidfed.lab.surf.nl"
 	},
     "http://www.heanet.ie": {
 		"name": "Edugate",
 		"country_code": "ie",
-		"md_url": ["https://edugate.heanet.ie/edugate-federation-metadata-signed.xml"]
+		"md_url": ["https://edugate.heanet.ie/edugate-federation-metadata-signed.xml"],
+		"ta_url": "https://edugate.oidfed.lab.surf.nl"
 	},
     "http://www.eduid.cz/": {
 		"name": "eduID.cz",
 		"country_code": "cz",
-		"md_url": ["https://metadata.eduid.cz/entities/eduid"]
+		"md_url": ["https://metadata.eduid.cz/entities/eduid"],
+		"ta_url": "https://eduidcz.oidfed.lab.surf.nl"
 	}, 
-    "http://eduid.hu": {
-		"name": "eduId.hu",
-		"country_code": "hu",
-		"md_url": ["http://metadata.eduid.hu/current/href.xml"]
-	},
     "http://eduid.lu": {
 		"name": "eduID Luxembourg",
 		"country_code": "lu",
-		"md_url": ["https://www.eduid.lu/metadata/upstream.xml"]
+		"md_url": ["https://www.eduid.lu/metadata/upstream.xml"],
+		"ta_url": "https://eduidlu.oidfed.lab.surf.nl"
 	},  
     "http://feide.no/": {
 		"name": "FEIDE",
 		"country_code": "no",
-		"md_url": ["https://idp.feide.no/simplesaml/saml2/idp/metadata.php"]
+		"md_url": ["https://idp.feide.no/simplesaml/saml2/idp/metadata.php"],
+		"ta_url": "https://feide.oidfed.lab.surf.nl"
 	},   
     "https://federation.renater.fr/": {
 		"name": "FER",
 		"country_code": "fr",
-		"md_url": ["https://pub.federation.renater.fr/metadata/renater/main/main-all-renater-metadata.xml"]
+		"md_url": ["https://pub.federation.renater.fr/metadata/renater/main/main-all-renater-metadata.xml"],
+		"ta_url": "https://fer.oidfed.lab.surf.nl"
 	},
 	"https://incommon.org": {
 		"name": "InCommon",
 		"country_code": "us",
-		"md_url": ["https://mdq.incommon.org/entities"]
+		"md_url": ["https://mdq.incommon.org/entities"],
+		"ta_url": "https://incommon.oidfed.lab.surf.nl"
 	},
     "http://eduid.at": {
 		"name": "Aconet",
 		"country_code": "at",
-		"md_url": ["https://eduid.at/md/aconet-registered.xml"]
+		"md_url": ["https://eduid.at/md/aconet-registered.xml"],
+		"ta_url": "https://aconet.oidfed.lab.surf.nl"
 	},
     "http://ukfederation.org.uk": {
 		"name": "UK federation",
 		"country_code": "uk",
-		"md_url": ["http://metadata.ukfederation.org.uk/ukfederation-metadata.xml"]
+		"md_url": ["http://metadata.ukfederation.org.uk/ukfederation-metadata.xml"],
+		"ta_url": "https://ukaf.oidfed.lab.surf.nl"
 	}, 
     "https://aai.pionier.net.pl": {
 		"name": "Pionier",
 		"country_code": "pl",
-		"md_url": ["http://aai.pionier.net.pl/pionierid.xml"]
+		"md_url": ["http://aai.pionier.net.pl/pionierid.xml"],
+		"ta_url": "https://pionier.oidfed.lab.surf.nl"
 	}, 
     "https://www.wayf.dk": {
 		"name": "WAYF",
 		"country_code": "dk",
-		"md_url": ["https://metadata.wayf.dk/birk-idp.xml"]
+		"md_url": ["https://metadata.wayf.dk/birk-idp.xml"],
+		"ta_url": "https://wayf.oidfed.lab.surf.nl"
 	},
     "https://www.aai.dfn.de": {
 		"name": "DFN-AAI",
 		"country_code": "de",
-		"md_url": ["http://www.aai.dfn.de/fileadmin/metadata/dfn-aai-basic-metadata.xml", "http://www.aai.dfn.de/fileadmin/metadata/dfn-aai-sp-metadata.xml"]
+		"md_url": ["http://www.aai.dfn.de/fileadmin/metadata/dfn-aai-basic-metadata.xml", "http://www.aai.dfn.de/fileadmin/metadata/dfn-aai-sp-metadata.xml"],
+		"ta_url": "https://dfn-aai.oidfed.lab.surf.nl"
 	},  
     "http://aai.grnet.gr/": {
 		"name": "DELOS - GRNET AAI Federation",
 		"country_code": "gr",
-		"md_url": ["https://md.aai.grnet.gr/aggregates/grnet-metadata.xml"]
+		"md_url": ["https://md.aai.grnet.gr/aggregates/grnet-metadata.xml"],
+		"ta_url": "https://delos.oidfed.lab.surf.nl"
 	},  
     "http://www.csc.fi/haka": {
 		"name": "HAKA",
 		"country_code": "fi",
-		"md_url": ["https://haka.funet.fi/metadata/haka-metadata.xml"]
+		"md_url": ["https://haka.funet.fi/metadata/haka-metadata.xml"],
+		"ta_url": "https://haka.oidfed.lab.surf.nl"
 	}, 
     "http://www.idem.garr.it/": {
 		"name": "IDEM",
 		"country_code": "it",
-		"md_url": ["http://md.idem.garr.it/metadata/edugain2idem-metadata-sha256.xml"]
+		"md_url": ["http://md.idem.garr.it/metadata/edugain2idem-metadata-sha256.xml"],
+		"ta_url": "https://idem.oidfed.lab.surf.nl"
 	},  
     "http://laife.lanet.lv/": {
 		"name": "LAIFE",
 		"country_code": "lv",
-		"md_url": ["https://laife.lanet.lv/metadata/laife-metadata.xml"]
+		"md_url": ["https://laife.lanet.lv/metadata/laife-metadata.xml"],
+		"ta_url": "https://laife.oidfed.lab.surf.nl"
+	}, 
+	"https://eduid.hu/en": {
+		"name": "eduID.hu",
+		"country_code": "hu",
+		"md_url": ["https://s3.eduid.hu/href-2020/href.xml"],
+		"ta_url": "https://eduidhu.oidfed.lab.surf.nl"
 	},      
     "http://www.surfconext.nl/": {
 		"name": "SURFconext",
 		"country_code": "nl",
-		"md_url": ["https://metadata.surfconext.nl/idps-metadata.xml"]
-	}
+		"md_url": ["https://metadata.surfconext.nl/idps-metadata.xml"],
+		"ta_url": "https://surfconext.oidfed.lab.surf.nl"
+	},
+	"https://aaf.edu.au": {
+		"name": "AAF",
+		"country_code": "au",
+		"md_url": ["https://md.aaf.edu.au/aaf-metadata.xml"],
+		"ta_url": "https://aaf.oidfed.lab.surf.nl"
+	},   
+	"https://https://www.aaiedu.hr/": {
+		"name": "aai@EduHr",
+		"country_code": "hr",
+		"md_url": ["https://login.aaiedu.hr/edugain/saml2/idp/metadata.php"],
+		"ta_url": "https://aaieduhr.oidfed.lab.surf.nl"
+	},  
+	"http://aaiedu.mk/": {
+		"name": "AAIEduMk",
+		"country_code": "mk",
+		"md_url": ["https://aaiedu.mk/metadata.aaiedumk.xml"],
+		"ta_url": "https://aaieduhr.oidfed.lab.surf.nl"
+	},  
+	"https://afire.asnet.am": {
+		"name": "AFIRE",
+		"country_code": "am",
+		"md_url": ["aai.asnet.am/metadata/edugain-upstream.xml"],
+		"ta_url": "https://afire.oidfed.lab.surf.nl"
+	}, 
+	"https://www.aai.arn.dz/": {
+		"name": "ARNaai",
+		"country_code": "am",
+		"md_url": ["aai.asnet.am/metadata/edugain-upstream.xml"],
+		"ta_url": "https://afire.oidfed.lab.surf.nl"
+	}, 
 }
 
