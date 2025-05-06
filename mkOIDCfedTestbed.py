@@ -124,6 +124,8 @@ def main(argv):
    metadataURLpath = ".well-known/openid-federation/"
 
    # Fetch Gabriels go repo 
+   if (os.path.exists('/tmp/go-oidfed')):
+      os.rmdir('/tmp/go-oidfed')
    Repo.clone_from('git@github.com:surfnet-niels/go-oidfed.git', '/tmp/go-oidfed')
 
    # First load RA config
