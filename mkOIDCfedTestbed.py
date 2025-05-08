@@ -158,7 +158,8 @@ def main(argv):
    allFeds = getFeds(edugainFedsURL, INPUT_PATH)
    raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
 
-   edugain = {
+   # Add eduGAIN as a TA
+   raConf['edugain'] = {
       'display_name': 'eduGAIN',
       'name':  'edugain',
       'reg_auth': '',
@@ -265,7 +266,20 @@ def main(argv):
    # Write config from template for all TAs
    #
    for ra in raConf.keys():
-      if ra != 'eduGAIN':
+      if ra == 'edugain':
+         # TODO: for edugain replace with propper YAML handling
+         conf = {
+            'testbed_domain': 'oidfed.lab.surf.nl'
+         }
+         
+         with open('templates/edugain_config.yaml', 'r') as f:
+            src = Template(f.read())
+            result = src.substitute(conf)
+            write_file(result, TESTBED_PATH+'/' +ra+ '/data/config.yaml', mkpath=False, overwrite=True)
+
+         os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+
+      else:
          conf = {
             'entity_id': raConf[ra]['ta_url'],
             'ta': 'https://edugain.oidfed.lab.surf.nl',
@@ -324,8 +338,7 @@ def main(argv):
    #
    caddyConf = []
    caddyConf.append('{\n     email niels.vandijk@surf.nl\n}\n')
-   caddyConf.append('\nedugain.'+ TESTBED_BASEURL + ' {\n     reverse_proxy edugain:8765\n}  ')
-   
+
    for ra in raConf.keys():
       caddyConf.append('\n' + ra +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+ra+':8765\n}  ')
    #p(''.join(caddyConf))
