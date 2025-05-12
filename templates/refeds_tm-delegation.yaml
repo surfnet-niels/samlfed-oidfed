@@ -1,0 +1,11 @@
+trust_mark_owner: https://refeds.$testbed_domain
+trust_marks:
+    - trust_mark_id: https://refeds.org/sirtfi
+      delegation_lifetime: 400000000
+      ref: ""
+      trust_mark_issuers:
+        - entity_id: https://nl.surfconext.$testbed_domain
+        - entity_id: https://it.garr.$testbed_domain
+        - entity_id: https://us.incommon.$testbed_domain
+        - entity_id: https://fi.haka.$testbed_domain
+        - entity_id: https://se.sunet.$testbed_domain
