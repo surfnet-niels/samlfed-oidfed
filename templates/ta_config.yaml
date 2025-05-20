@@ -22,13 +22,13 @@ trust_mark_specs:
   - trust_mark_id: "https://refeds.org/sirtfi"
     lifetime: 86400
     ref: "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf"
-    delegation_jwt: %REFEDS_DELEGATION_JWT_GARR%
+    delegation_jwt: $refeds_delegation_jwt
     checker:
       type: none
 trust_mark_owners:
   "https://refeds.org/sirtfi":
     entity_id: "$refeds_tmo_url"
-    jwks: %REFEDS_JWKS%
+    jwks: "$refeds_jwks"
 trust_marks:
   - trust_mark_id: "https://edugain.org/member"
     trust_mark_issuer: "$edugain_member_tmi_url"

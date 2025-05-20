@@ -27,10 +27,10 @@ trust_mark_specs:
       config:
         trust_anchors:
           - entity_id: "https://nl.surfconext.$testbed_domain"
-          - entity_id: "https://it.garr.$testbed_domain"
+          - entity_id: "https://it.idem.$testbed_domain"
           - entity_id: "https://us.incommon.$testbed_domain"
           - entity_id: "https://fi.haka.$testbed_domain"
-          - entity_id: "https://se.sunet.$testbed_domain"
+          - entity_id: "https://se.swamid.$testbed_domain"
 trust_mark_issuers:
   https://edugain.org/member:
     - "https://edugain.$testbed_domain"
@@ -44,8 +44,8 @@ trust_mark_issuers:
     - "https://incommon.$testbed_domain"
 trust_mark_owners:
   "https://refeds.org/sirtfi":
-    entity_id: "https://refeds.$testbed_domain"
-    jwks: %REFEDS_JWKS%
+    entity_id: "$refeds_tmo_url"
+    jwks: $refeds_jwks
 trust_marks:
   - trust_mark_id: "https://edugain.org/member"
     trust_mark_issuer: "https://edugain.$testbed_domain"
