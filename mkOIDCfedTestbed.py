@@ -83,34 +83,34 @@ def fetchFile(url, file_path, overwrite=True):
     return False
 
 def getFeds(ulr, input_path):
-  json_file = input_path + 'allfeds.json'
-  fetchFile(ulr, json_file)
-  with open(json_file) as json_file:
-     return json.load(json_file)
+    json_file = input_path + 'allfeds.json'
+    fetchFile(ulr, json_file)
+    with open(json_file) as json_file:
+        return json.load(json_file)
 
 def parseFeds(fedsJson,fedsInUse):
-   RAs = {}
-   
-   for fedID in fedsJson.keys(): 
-      if fedID in fedsInUse:
-         p(fedID + " included in testbed")
-         if fedsJson[fedID]['status'] == "6":
-            if "countries" in fedsJson[fedID]:
-               for i in range(0,len(fedsJson[fedID].get('countries'))): 
-                  fedID_country = ''.join(fedsJson[fedID].get('country_code')[i].lower()) +'.'+fedID.lower() 
-                  thisFedData = {'display_name': fedsJson[fedID]['name'] + ' (' + ''.join(fedsJson[fedID].get('countries')[i]) +')',
-                     'name':  ''.join(fedsJson[fedID].get('country_code')[i].lower())+ '_' + fedsJson[fedID]['name'].lower(),
-                     'reg_auth': fedsJson[fedID]['reg_auth'],
-                     'country_code': ''.join(fedsJson[fedID].get('country_code')[i]),
-                     'md_url': [fedsJson[fedID]['metadata_url']],
-                     'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.oidfed.lab.surf.nl'}
+    RAs = {}
 
-                  RAs[fedID_country] = thisFedData
-      else:
-         p(fedID + " skipped as not in use due to config")
-   return RAs 
+    for fedID in fedsJson.keys(): 
+        if fedID in fedsInUse:
+            p(fedID + " included in testbed")
+            if fedsJson[fedID]['status'] == "6":
+                if "countries" in fedsJson[fedID]:
+                    for i in range(0,len(fedsJson[fedID].get('countries'))): 
+                        fedID_country = ''.join(fedsJson[fedID].get('country_code')[i].lower()) +'.'+fedID.lower() 
+                        thisFedData = {'display_name': fedsJson[fedID]['name'] + ' (' + ''.join(fedsJson[fedID].get('countries')[i]) +')',
+                            'name':  ''.join(fedsJson[fedID].get('country_code')[i].lower())+ '_' + fedsJson[fedID]['name'].lower(),
+                            'reg_auth': fedsJson[fedID]['reg_auth'],
+                            'country_code': ''.join(fedsJson[fedID].get('country_code')[i]),
+                            'md_url': [fedsJson[fedID]['metadata_url']],
+                            'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.oidfed.lab.surf.nl'}
 
-class Config:
+                        RAs[fedID_country] = thisFedData
+            else:
+                p(fedID + " skipped as not in use due to config")
+    return RAs 
+
+class EntityConfig:
     def __init__(self):
         self.server_port = None
         self.entity_id = None
@@ -122,10 +122,11 @@ class Config:
         self.metadata_policy_file = None
         self.endpoints = {}
         self.trust_mark_specs = []
+        self.trust_marks = []
         self.trust_mark_owners = {}
 
     def from_yaml(file_path):
-        config = Config()
+        config = EntityConfig()
         with open(file_path, 'r') as f:
             data = yaml.safe_load(f)
             if 'server_port' in data:
@@ -140,7 +141,7 @@ class Config:
                 config.organization_name = data['organization_name']
             if 'data_location' in data:
                 config.data_location = data['data_location']
-            if 'human_readable_storage' in data and data['human_readable_storage'].lower() == 'true':
+            if 'human_readable_storage' in data:
                 config.human_readable_storage = True
             if 'metadata_policy_file' in data:
                 config.metadata_policy_file = data['metadata_policy_file']
@@ -177,7 +178,7 @@ class Config:
 
     def to_yaml(self, file_path):
         with open(file_path, 'w') as f:
-            yaml.dump(**self.__dict__), f)
+            yaml.dump((self.__dict__), f)
 
     def set_server_port(self, port):
         self.server_port = port
@@ -199,7 +200,7 @@ class Config:
     def get_authority_hints(self):
         return self.authority_hints
 
-   def set_server_port(self, port):
+    def set_server_port(self, port):
         self.server_port = port
 
     def get_server_port(self):
@@ -210,14 +211,6 @@ class Config:
 
     def get_entity_id(self):
         return self.entity_id
-
-    def add_authority_hint(self, authority_hint):
-        if 'authority_hints' not in self.__dict__:
-            self.authority_hints = []
-        self.authority_hints.append(authority_hint)
-
-    def get_authority_hints(self):
-        return self.authority_hints
 
     def set_signing_key_file(self, file_path):
         self.signing_key_file = file_path
@@ -266,13 +259,10 @@ class Config:
     def get_trust_mark_specs(self):
         return self.trust_mark_specs
 
-    def add_trust_mark_spec(self, spec):
-        if 'trust_mark_specs' not in self.__dict__:
-            self.trust_mark_specs = []
-        self.trust_mark_specs.append(spec)
-
-    def set_trust_marks(self, marks):
-        self.trust_marks = marks
+    def add_trust_mark(self, trust_mark_id, trust_mark_issuer):
+        if 'trust_marks' not in self.__dict__:
+            self.trust_marks = []
+        self.trust_marks.append({'trust_mark_id': trust_mark_id, 'trust_mark_issuer': trust_mark_issuer})   
 
     def get_trust_marks(self):
         return self.trust_marks
@@ -285,310 +275,334 @@ class Config:
     def get_trust_mark_owners(self):
         return self.trust_mark_owners
 
-
-
-# Example usage
-config = Config.from_yaml('path/to/config.yaml')
-print(config.server_port)  # prints the server port from the YAML file
-config.to_yaml('new/path/new_config.yaml')  # writes the config to a new file
-
-
-
-
 def main(argv):
 
-   ROOTPATH='/home/debian/samlfed-oidfed'
-   TESTBED_PATH = ROOTPATH + '/testbed'
-   CONFIG_PATH = TESTBED_PATH + '/config/'
-   INPUT_PATH = TESTBED_PATH + '/feeds/'
-   OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
-   KEYS_PATH = TESTBED_PATH + '/keys/'
-   TESTBED_BASEURL= 'oidf.lab.surf.nl'
+    ROOTPATH='/home/debian/samlfed-oidfed'
+    TESTBED_PATH = ROOTPATH + '/testbed'
+    CONFIG_PATH = TESTBED_PATH + '/config/'
+    INPUT_PATH = TESTBED_PATH + '/feeds/'
+    OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
+    KEYS_PATH = TESTBED_PATH + '/keys/'
+    TESTBED_BASEURL= 'oidf.lab.surf.nl'
 
-   EDUGAIN_RA_URI = 'https://www.edugain.org'
+    EDUGAIN_RA_URI = 'https://www.edugain.org'
 
-   ENROLLLEAFS = False
-   # Fetch edugain RAs from edugain technical site via URL (True) or use static file (False)?
-   FETCHEDUGAINURL = True
+    ENROLLLEAFS = False
+    # Fetch edugain RAs from edugain technical site via URL (True) or use static file (False)?
+    FETCHEDUGAINURL = True
 
-   #
-   # Load RAs from eduGAIN
-   #   
-   if FETCHEDUGAINURL:
-      edugainFedsURL = 'https://technical.edugain.org/api.php?action=list_feds_full'
-      allFeds = getFeds(edugainFedsURL, INPUT_PATH)
-      raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
-   else:
-      raConf = loadJSON(CONFIG_PATH + 'RAs.json')
+    #
+    # Load RAs from eduGAIN
+    #   
+    if FETCHEDUGAINURL:
+        edugainFedsURL = 'https://technical.edugain.org/api.php?action=list_feds_full'
+        allFeds = getFeds(edugainFedsURL, INPUT_PATH)
+        raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
+    else:
+        raConf = loadJSON(CONFIG_PATH + 'RAs.json')
 
-   # Add eduGAIN as a TA
-   raConf['edugain'] = {
-      'display_name': 'eduGAIN',
-      'name':  'edugain',
-      'reg_auth': '',
-      'country_code': '',
-      'md_url': [''],
-      'ta_url': 'https://edugain.oidfed.lab.surf.nl'
-   }
+    # Add eduGAIN as a TA
+    raConf['edugain'] = {
+        'display_name': 'eduGAIN',
+        'name':  'edugain',
+        'reg_auth': '',
+        'country_code': '',
+        'md_url': [''],
+        'ta_url': 'https://edugain.oidfed.lab.surf.nl'
+    }
 
-   #
-   # Configure Test RPs
-   # Note all other RPs will register lateron
-   #
-   rpConf = {
-      "surf-rp": {
-         "name": "SURF test RP",
-         "url": "https://surf-rp." + TESTBED_BASEURL,
-         "tas": ["it.idem", "edugain"]
-      }, 
-      "puhuri-rp": {
-         "name": "Puhuri test RP",
-         "url": "https://puhuri-rp." + TESTBED_BASEURL,
-         "tas": ["fi.haka", "edugain"]
-      }, 
-      "helsinki-rp": {
-         "name": "Helsinki test RP",
-         "url": "https://helsinki-rp." + TESTBED_BASEURL,
-         "tas": ["fi.haka", "edugain"]
-      }, 
-      "garr-rp": {
-         "name": "GARR test RP",
-         "url": "https://garr-rp." + TESTBED_BASEURL,
-         "tas": ["fi.haka", "edugain"]
-      }
-   }
+    #
+    # Configure Test RPs
+    # Note all other RPs will register lateron
+    #
+    rpConf = {
+        "surf-rp": {
+            "name": "SURF test RP",
+            "url": "https://surf-rp." + TESTBED_BASEURL,
+            "tas": ["it.idem", "edugain"]
+        }, 
+        "puhuri-rp": {
+            "name": "Puhuri test RP",
+            "url": "https://puhuri-rp." + TESTBED_BASEURL,
+            "tas": ["fi.haka", "edugain"]
+        }, 
+        "helsinki-rp": {
+            "name": "Helsinki test RP",
+            "url": "https://helsinki-rp." + TESTBED_BASEURL,
+            "tas": ["fi.haka", "edugain"]
+        }, 
+        "garr-rp": {
+            "name": "GARR test RP",
+            "url": "https://garr-rp." + TESTBED_BASEURL,
+            "tas": ["fi.haka", "edugain"]
+        }
+    }
 
-   # Config for TMIs that are not part of TAs
-   tmiConf = {
-      "erasmus-plus": {
-         "name": "Erasmus+ Trustmark Issuer",
-         "url": "https://erasmus-plus." + TESTBED_BASEURL,
-         "tas": ["edugain"]
-      }
-   }
+    # Config for TMIs that are not part of TAs
+    tmiConf = {
+        "erasmus-plus": {
+            "name": "Erasmus+ Trustmark Issuer",
+            "url": "https://erasmus-plus." + TESTBED_BASEURL,
+            "tas": ["edugain"]
+        }
+    }
 
-   # Config for TMOs
-   tmoConf = {
-      "refeds": {
-         "name": "REFEDs Trustmark Owner",
-         "url": "https://refeds." + TESTBED_BASEURL,
-         "tas": ["edugain"],
-         "jwks": ""
-      }, 
+    # Config for TMOs
+    tmoConf = {
+        "refeds": {
+            "name": "REFEDs Trustmark Owner",
+            "url": "https://refeds." + TESTBED_BASEURL,
+            "tas": ["edugain"],
+            "jwks": ""
+        }, 
 
-   }
-   #
-   # Make sure we have all config dirs
-   # TODO: make function for this
-   #os.makedirs(TESTBED_PATH+'/edugain', mode=0o777, exist_ok=True)   
-   os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
-   for ra in raConf.keys():
-      os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
-   for rp in rpConf.keys():
-      os.makedirs(TESTBED_PATH+'/' +rp+ '/data', mode=0o777, exist_ok=True)
-   for tmi in tmiConf.keys():
-      os.makedirs(TESTBED_PATH+'/' +tmi+ '/data', mode=0o777, exist_ok=True)
-   for tmo in tmoConf.keys():
-      os.makedirs(TESTBED_PATH+'/' +tmo+ '/data', mode=0o777, exist_ok=True)
+    }
+    #
+    # Make sure we have all config dirs
+    # TODO: make function for this
+    #os.makedirs(TESTBED_PATH+'/edugain', mode=0o777, exist_ok=True)   
+    os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
+    for ra in raConf.keys():
+        os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
+    for rp in rpConf.keys():
+        os.makedirs(TESTBED_PATH+'/' +rp+ '/data', mode=0o777, exist_ok=True)
+    for tmi in tmiConf.keys():
+        os.makedirs(TESTBED_PATH+'/' +tmi+ '/data', mode=0o777, exist_ok=True)
+    for tmo in tmoConf.keys():
+        os.makedirs(TESTBED_PATH+'/' +tmo+ '/data', mode=0o777, exist_ok=True)
 
-   #
-   # Build docker-compose container definition
-   #
-   tb = {
-      "services": {}, 
-      "networks": {"caddy": ''}
-   }
+    #
+    # Build docker-compose container definition
+    #
+    tb = {
+        "services": {}, 
+        "networks": {"caddy": ''}
+    }
 
-   # Add TAs
-   for ra in raConf.keys():
-      fedRA = {
-         "image": "'myoidc/oidfed-gota'",
-         "networks": {"caddy": ''},
-         "volumes": [TESTBED_PATH+'/' +ra+ '/data:/data'],
-         "expose": ["8765"],
-         "stop_grace_period": "'500ms'"
-      }
-      tb['services'][ra] = fedRA
+    # Add TAs
+    for ra in raConf.keys():
+        fedRA = {
+            "image": "'myoidc/oidfed-gota'",
+            "networks": {"caddy": ''},
+            "volumes": [TESTBED_PATH+'/' +ra+ '/data:/data'],
+            "expose": ["8765"],
+            "stop_grace_period": "'500ms'"
+        }
+        tb['services'][ra] = fedRA
 
-   # Add (test) RPs
-   for rp in rpConf.keys():
-      fedRP = {
-         "image": "'myoidc/oidfed-gorp'",
-         "networks": {"caddy": ''},
-         "volumes": [
-            TESTBED_PATH+'/' +rp+ '/data:/data',
-            TESTBED_PATH+'/' +rp+ '/config.yaml:/config.yaml:ro'
-         ],
-         "expose": ["8765"],
-         "stop_grace_period": "'500ms'"
-      }
-      tb['services'][rp] = fedRP
+    # Add (test) RPs
+    for rp in rpConf.keys():
+        fedRP = {
+            "image": "'myoidc/oidfed-gorp'",
+            "networks": {"caddy": ''},
+            "volumes": [
+                TESTBED_PATH+'/' +rp+ '/data:/data',
+                TESTBED_PATH+'/' +rp+ '/config.yaml:/config.yaml:ro'
+            ],
+            "expose": ["8765"],
+            "stop_grace_period": "'500ms'"
+        }
+        tb['services'][rp] = fedRP
 
-   # add Caddy
-   tb['services']['caddy'] = {
-         "image": "'caddy:latest'",
-         "networks": {"caddy": ''},
-         "ports": ["'80:80'", "'443:443'"],
-         "volumes": [
-            TESTBED_PATH + "/caddy/Caddyfile:/etc/caddy/Caddyfile",
-            TESTBED_PATH + "/caddy/data:/data",
-            TESTBED_PATH + "/caddy/config:/config"
-         ],
-         "expose": ["8765"],
-         "stop_grace_period": "'500ms'"
-   }
+    # add Caddy
+    tb['services']['caddy'] = {
+            "image": "'caddy:latest'",
+            "networks": {"caddy": ''},
+            "ports": ["'80:80'", "'443:443'"],
+            "volumes": [
+                TESTBED_PATH + "/caddy/Caddyfile:/etc/caddy/Caddyfile",
+                TESTBED_PATH + "/caddy/data:/data",
+                TESTBED_PATH + "/caddy/config:/config"
+            ],
+            "expose": ["8765"],
+            "stop_grace_period": "'500ms'"
+    }
 
-   #
-   # Write docker compose file in tmp file
-   #
-   write_file(tb, './tmp.yaml', mkpath=False, overwrite=True, type="yaml")
-   # create testbed docker compose file by doing some post processing
-   subprocess.run(['./mkDockerCompose.sh'])
-   os.popen('mv ./docker-compose.yaml '+TESTBED_PATH+'/docker-compose.yaml') 
+    #
+    # Write docker compose file in tmp file
+    #
+    write_file(tb, './tmp.yaml', mkpath=False, overwrite=True, type="yaml")
+    # create testbed docker compose file by doing some post processing
+    subprocess.run(['./mkDockerCompose.sh'])
+    os.popen('mv ./docker-compose.yaml '+TESTBED_PATH+'/docker-compose.yaml') 
 
-   # END Build docker-compose container definition
+    # END Build docker-compose container definition
 
-   # Build configuration for various containers
+    # Build configuration for various containers
 
-   # Add Trustmark Owners
-   # TMOs are not operational infra so do not need to be in the docker compose!
-   # They do need config so we can call a TMO to generate its TM delegation JWT
-   # TODO: handle this with propper yaml parsing
-   for tmo in tmoConf:
-      conf = {
-         'testbed_domain': 'oidfed.lab.surf.nl'
-      }
-      with open('templates/'+tmo+'_tm-delegation.yaml', 'r') as f:
-         src = Template(f.read())
-         result = src.substitute(conf)
-         write_file(result, TESTBED_PATH+'/' +tmo+ '/data/tm-delegation.yaml', mkpath=False, overwrite=True)
-
-      # Now run the TMO docker container to generate delegation jwt on the fly
-      try:
-         os.popen('docker run --rm --user "${UID}":"${GID}" -v "'+ TESTBED_PATH+'/' +tmo+'/data:/refeds" myoidc/oidfed-gota /tacli delegation --json /'+tmo+'/tm-delegation.yaml')
-      except:
-         p("Could not create delegation JWT for TMO " + tmo) 
-      # generate JWKS
-      try:
-         tmoDel = loadJSON(TESTBED_PATH+'/' +tmo+'/data/tm-delegation.json')
-      except:
-         p("Could not parse delegation data for TMO " + tmo + ' in file ' + TESTBED_PATH+'/' +tmo+'/tm-delegation.json') 
-
-      #pj(tmoDel)
-      tmoConf[tmo]['jwks'] = tmoDel['jwks']
-      tmoConf[tmo]['trust_mark_issuers'] = {}
-      # loop over TMs for this TMO
-      for tm in tmoDel['trust_marks']:
-         p(tm["trust_mark_id"])
-         #p(tm["trust_mark_issuers"])
-         for tmi in tm["trust_mark_issuers"]:
-            tmoConf[tmo]['trust_mark_issuers'][tmi['entity_id']] = tmi['delegation_jwt']
-
-      # Put JWKS and delegation JWT in config so we can add it to the TA config
-      pj(tmoConf)
-
-
-   # Add Trust Mark Issuers
-   # This are stand alone TMIs. Some TAs may also be TMIs, that is part of TA config
-   # Some TMIs may be issuing delegated TMIs for a given TMO
-   for tmi in tmiConf.keys():
-      fedTMI = {
-         "image": "'myoidc/oidfed-gota'",
-         "networks": {"caddy": ''},
-         "volumes": [TESTBED_PATH+'/' +tmi+ '/data:/data'],
-         "expose": ["8765"],
-         "stop_grace_period": "'500ms'"
-      }
-      tb['services'][tmi] = fedTMI
-      os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
-
-   #
-   # Write config from template for all TAs
-   #
-   for ra in raConf.keys():
-      if ra == 'edugain':
-         # TODO: for edugain replace with proper YAML handling
-         # TODO: proper TMI handling
-         conf = {
-            'testbed_domain': 'oidfed.lab.surf.nl',
-            'refeds_tmo_url': 'https://refeds.oidfed.lab.surf.nl',
-            'refeds_jwks': tmoConf['refeds']['jwks']
-         }
-         
-         with open('templates/edugain_config.yaml', 'r') as f:
+    # Add Trustmark Owners
+    # TMOs are not operational infra so do not need to be in the docker compose!
+    # They do need config so we can call a TMO to generate its TM delegation JWT
+    # TODO: handle this with propper yaml parsing
+    for tmo in tmoConf:
+        conf = {
+            'testbed_domain': 'oidfed.lab.surf.nl'
+        }
+        with open('templates/'+tmo+'_tm-delegation.yaml', 'r') as f:
             src = Template(f.read())
             result = src.substitute(conf)
-            write_file(result, TESTBED_PATH+'/' +ra+ '/data/config.yaml', mkpath=False, overwrite=True)
+            write_file(result, TESTBED_PATH+'/' +tmo+ '/data/tm-delegation.yaml', mkpath=False, overwrite=True)
 
-         os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+        # Now run the TMO docker container to generate delegation jwt on the fly
+        try:
+            #os.popen('docker run --rm --user "${UID}":"${GID}" -v "'+ TESTBED_PATH+'/' +tmo+'/data:/refeds" myoidc/oidfed-gota /tacli delegation --json /'+tmo+'/tm-delegation.yaml')
+            os.popen('docker run --rm --user "1000":"1000" -v "'+ TESTBED_PATH+'/' +tmo+'/data:/refeds" myoidc/oidfed-gota /tacli delegation --json /'+tmo+'/tm-delegation.yaml')
+        except:
+            p("Could not create delegation JWT for TMO " + tmo) 
+        
+        # the docker might be a bit slow so wait untill the file has been created
+        while not os.path.exists(TESTBED_PATH+'/' +tmo+'/data/tm-delegation.json'):
+            time.sleep(1)
+        else:
+            # generate JWKS
+            try:
+                tmoDel = loadJSON(TESTBED_PATH+'/' +tmo+'/data/tm-delegation.json')
+            except:
+                p("Could not parse delegation data for TMO " + tmo + ' in file ' + TESTBED_PATH+'/' +tmo+'/tm-delegation.json') 
 
-      else:
-         # TODO: proper TMI handling
-         conf = {
-            'entity_id': raConf[ra]['ta_url'],
-            'ta': 'https://edugain.oidfed.lab.surf.nl',
-            'orgname': raConf[ra]['name'],
+        #pj(tmoDel)
+        tmoConf[tmo]['jwks'] = tmoDel['jwks']
+        tmoConf[tmo]['trust_mark_issuers'] = {}
+        # loop over TMs for this TMO
+        for tm in tmoDel['trust_marks']:
+            p(tm["trust_mark_id"])
+            #p(tm["trust_mark_issuers"])
+            for tmi in tm["trust_mark_issuers"]:
+                tmoConf[tmo]['trust_mark_issuers'][tmi['entity_id']] = tmi['delegation_jwt']
+
+        # Put JWKS and delegation JWT in config so we can add it to the TA config
+        pj(tmoConf)
+
+
+    # Add Trust Mark Issuers
+    # This are stand alone TMIs. Some TAs may also be TMIs, that is part of TA config
+    # Some TMIs may be issuing delegated TMIs for a given TMO
+    for tmi in tmiConf.keys():
+        fedTMI = {
+            "image": "'myoidc/oidfed-gota'",
+            "networks": {"caddy": ''},
+            "volumes": [TESTBED_PATH+'/' +tmi+ '/data:/data'],
+            "expose": ["8765"],
+            "stop_grace_period": "'500ms'"
+        }
+        tb['services'][tmi] = fedTMI
+        os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+
+    #
+    # Write config from template for all TAs
+    #
+    for ra in raConf.keys():
+        # read the TA config template
+        ta = EntityConfig.from_yaml('templates/ta_config.yaml')
+        #print(ta.get_endpoints())  # prints the server port from the YAML file
+        
+        #entity_id
+        ta.set_entity_id(raConf[ra]["ta_url"])
+        #organization_name
+        ta.set_organization_name(raConf[ra]["display_name"])
+
+        # Update values as needed
+        if ra == 'edugain':
+            # TODO: for edugain replace with proper YAML handling
+            # TODO: proper TMI handling
+            # Add REFEDs as SIRTFI trustmark owner
+            ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
+
+            # Copy over edugain policy template 
+            os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+
+        else:
+            # TODO: proper TMI handling
+            conf = {
+                #'entity_id': raConf[ra]['ta_url'],
+                #'ta': 'https://edugain.oidfed.lab.surf.nl',
+                #'orgname': raConf[ra]['name'],
+                #'refeds_tmo_url': 'https://refeds.oidfed.lab.surf.nl',
+                #'refeds_jwks': tmoConf['refeds']['jwks'],
+                #'edugain_member_tmi_url': 'https://edugain.oidfed.lab.surf.nl',
+                #'refeds_sirtfi_tmi_url': raConf[ra]['ta_url'],
+                #'refeds_delegation_jwt': tmoConf['refeds']['trust_mark_issuers'][raConf[ra]['ta_url']]
+            }
+
+            # for now all Tas have eduGAIN as the parent
+            ta.add_authority_hint(raConf["edugain"]['ta_url'])
+
+            # Add REFEDs as SIRTFI trustmark owner
+            ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
+
+            # Add eduGAIN and REFEDs as trustmark issuers
+            ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer='https://edugain.oidfed.lab.surf.nl')
+            ta.add_trust_mark(trust_mark_id="https://refeds.org/sirtfi", trust_mark_issuer=raConf[ra]['ta_url'])
+
+            # Add eduGAIN as eduGAIN Membership TMI
+            #ta.add_trust_mark_spec()
+
+
+            #trust_mark_specs:
+            #  - trust_mark_id: "https://refeds.org/sirtfi"
+            #    lifetime: 86400
+            #    ref: "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf"
+            #    delegation_jwt: $refeds_delegation_jwt
+            #    checker:
+            #      type: none
+
+            #with open('templates/ta_config.yaml', 'r') as f:
+            #    src = Template(f.read())
+            #    result = src.substitute(conf)
+            #    write_file(result, TESTBED_PATH+'/' +ra+ '/data/config.yaml', mkpath=False, overwrite=True)
+
+            os.popen('cp templates/ta_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+        
+        # Write config to file
+        ta.to_yaml(TESTBED_PATH+'/' +ra+ '/data/config.yaml')  # writes the config to file
+
+    #
+    # TODO: Write config from template for all TrustMark Issuers
+    #
+
+
+    #
+    # TODO: Write config from template for all TEST RPs
+    #
+    #
+    # Write config from template for all TAs
+    #
+    for rp in rpConf.keys():
+        conf = {
+            'entity_id': rpConf[rp]['url'],
+            'authority': 'https://edugain.oidfed.lab.surf.nl',
+            'orgname': rpConf[rp]['name'],
             'refeds_tmo_url': 'https://refeds.oidfed.lab.surf.nl',
-            'refeds_jwks': tmoConf['refeds']['jwks'],
             'edugain_member_tmi_url': 'https://edugain.oidfed.lab.surf.nl',
-            'refeds_sirtfi_tmi_url': raConf[ra]['ta_url'],
-            'refeds_delegation_jwt': tmoConf['refeds']['trust_mark_issuers'][raConf[ra]['ta_url']]
-         }
+            'refeds_sirtfi_tmi_url': rpConf[rp]['url']
+        }
 
-         with open('templates/ta_config.yaml', 'r') as f:
+        tas = ''
+        for ta in rpConf[rp]['tas']:
+            tas = tas + '  - entity_id: ' + raConf[ta]['ta_url']+ "\n"
+        conf['tas'] = tas
+
+        with open('templates/rp_config.yaml', 'r') as f:
             src = Template(f.read())
             result = src.substitute(conf)
-            write_file(result, TESTBED_PATH+'/' +ra+ '/data/config.yaml', mkpath=False, overwrite=True)
+            write_file(result, TESTBED_PATH+'/' +rp+ '/data/config.yaml', mkpath=False, overwrite=True)
 
-         os.popen('cp templates/ta_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+        #os.popen('cp templates/ta_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
 
-   #
-   # TODO: Write config from template for all TrustMark Issuers
-   #
+    #
+    # TODO: Write config from template for all TEST OPs
+    #
 
+    #
+    # Build caddy configuration file to proxy all containers
+    #
+    caddyConf = []
+    caddyConf.append('{\n     email niels.vandijk@surf.nl\n}\n')
 
-   #
-   # TODO: Write config from template for all TEST RPs
-   #
-   #
-   # Write config from template for all TAs
-   #
-   for rp in rpConf.keys():
-      conf = {
-         'entity_id': rpConf[rp]['url'],
-         'authority': 'https://edugain.oidfed.lab.surf.nl',
-         'orgname': rpConf[rp]['name'],
-         'refeds_tmo_url': 'https://refeds.oidfed.lab.surf.nl',
-         'edugain_member_tmi_url': 'https://edugain.oidfed.lab.surf.nl',
-         'refeds_sirtfi_tmi_url': rpConf[rp]['url']
-      }
-
-      tas = ''
-      for ta in rpConf[rp]['tas']:
-         tas = tas + '  - entity_id: ' + raConf[ta]['ta_url']+ "\n"
-      conf['tas'] = tas
-
-      with open('templates/rp_config.yaml', 'r') as f:
-         src = Template(f.read())
-         result = src.substitute(conf)
-         write_file(result, TESTBED_PATH+'/' +rp+ '/data/config.yaml', mkpath=False, overwrite=True)
-
-      #os.popen('cp templates/ta_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
-
-   #
-   # TODO: Write config from template for all TEST OPs
-   #
-
-   #
-   # Build caddy configuration file to proxy all containers
-   #
-   caddyConf = []
-   caddyConf.append('{\n     email niels.vandijk@surf.nl\n}\n')
-
-   for ra in raConf.keys():
-      caddyConf.append('\n' + ra +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+ra+':8765\n}  ')
-   #p(''.join(caddyConf))
-   write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
+    for ra in raConf.keys():
+        caddyConf.append('\n' + ra +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+ra+':8765\n}  ')
+    #p(''.join(caddyConf))
+    write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
