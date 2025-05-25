@@ -110,7 +110,44 @@ def parseFeds(fedsJson,fedsInUse):
                 p(fedID + " skipped as not in use due to config")
     return RAs 
 
-class EntityConfig:
+class tmo_config:
+    def __init__(self):
+        self.trust_mark_owner = None
+        self.trust_marks = []
+
+    def from_yaml(file_path):
+        config = tmo_config()
+        with open(file_path, 'r') as f:
+            data = yaml.safe_load(f)
+            if 'trust_mark_owner' in data:
+                config.trust_mark_owner = data['trust_mark_owner']
+            if 'trust_marks' in data:
+                for trust_mark in data['trust_marks']:
+                    tm = {}
+                    if 'trust_mark_id' in trust_mark:
+                        tm['trust_mark_id'] = trust_mark['trust_mark_id']
+                    if 'delegation_lifetime' in trust_mark:
+                        tm['delegation_lifetime'] = trust_mark['delegation_lifetime']
+                    if 'logo_uri' in trust_mark:
+                        tm['logo_uri'] = trust_mark['logo_uri']                        
+                    if 'ref' in trust_mark:
+                        tm['ref'] = trust_mark['ref']
+                    if 'trust_mark_issuers' in trust_mark:
+                        tm['trust_mark_issuers'] = trust_mark['trust_mark_issuers']
+
+        return config
+    
+    def to_yaml(self, file_path):
+        with open(file_path, 'w') as f:
+            yaml.dump((self.__dict__), f)
+
+    def get_trust_mark_owner(self):
+        return self.trust_mark_owner
+
+    def set_trust_mark_owner(self, trust_mark_owner):
+        self.trust_mark_owner = trust_mark_owner
+
+class ta_config:
     def __init__(self):
         self.server_port = None
         self.entity_id = None
@@ -126,7 +163,7 @@ class EntityConfig:
         self.trust_mark_owners = {}
 
     def from_yaml(file_path):
-        config = EntityConfig()
+        config = ta_config()
         with open(file_path, 'r') as f:
             data = yaml.safe_load(f)
             if 'server_port' in data:
@@ -253,8 +290,14 @@ class EntityConfig:
     def get_endpoints(self):
         return self.endpoints
 
-    def set_trust_mark_specs(self, specs):
-        self.trust_mark_specs = specs
+    def add_trust_mark_specs(self, trust_mark_id, ref, delegation_jwt, lifetime=86400, checker_type="none"):
+        if 'trust_mark_specs' not in self.__dict__:
+            self.trust_mark_specs = []
+        self.trust_mark_specs.append({'trust_mark_id': trust_mark_id, 
+                                      "lifetime": lifetime,
+                                      'ref': ref,
+                                      'delegation_jwt': delegation_jwt,
+                                      "checker": {"type" : checker_type} })   
 
     def get_trust_mark_specs(self):
         return self.trust_mark_specs
@@ -277,10 +320,10 @@ class EntityConfig:
 
 def main(argv):
 
-    ROOTPATH='/home/debian/samlfed-oidfed'
+    ROOTPATH='/home/niels/dev/samlfed-oidfed'
     TESTBED_PATH = ROOTPATH + '/testbed'
     CONFIG_PATH = TESTBED_PATH + '/config/'
-    INPUT_PATH = TESTBED_PATH + '/feeds/'
+    INPUT_PATH = ROOTPATH + '/feeds/'
     OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
     KEYS_PATH = TESTBED_PATH + '/keys/'
     TESTBED_BASEURL= 'oidf.lab.surf.nl'
@@ -297,9 +340,11 @@ def main(argv):
     if FETCHEDUGAINURL:
         edugainFedsURL = 'https://technical.edugain.org/api.php?action=list_feds_full'
         allFeds = getFeds(edugainFedsURL, INPUT_PATH)
-        raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
     else:
-        raConf = loadJSON(CONFIG_PATH + 'RAs.json')
+        allFeds = loadJSON(INPUT_PATH + 'allfeds.json')
+
+    raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
+
 
     # Add eduGAIN as a TA
     raConf['edugain'] = {
@@ -340,10 +385,21 @@ def main(argv):
 
     # Config for TMIs that are not part of TAs
     tmiConf = {
+        "edugain": {
+            "name": "eduGAIN Membership Trustmark Issuer",
+            "url": "https://erasmus-plus." + TESTBED_BASEURL,
+            "tas": ["edugain"],
+            "trust_mark_id": "https://edugain.org/member",
+            "logo_uri": "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
+            "ref": "",
+        },
         "erasmus-plus": {
             "name": "Erasmus+ Trustmark Issuer",
             "url": "https://erasmus-plus." + TESTBED_BASEURL,
-            "tas": ["edugain"]
+            "tas": ["edugain"],
+            "trust_mark_id": "",
+            "logo_uri": "",
+            "ref": "",
         }
     }
 
@@ -353,7 +409,10 @@ def main(argv):
             "name": "REFEDs Trustmark Owner",
             "url": "https://refeds." + TESTBED_BASEURL,
             "tas": ["edugain"],
-            "jwks": ""
+            "jwks": "",
+            "trust_mark_id": "https://refeds.org/sirtfi",
+            "ref": "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf"
+
         }, 
 
     }
@@ -435,6 +494,13 @@ def main(argv):
     # They do need config so we can call a TMO to generate its TM delegation JWT
     # TODO: handle this with propper yaml parsing
     for tmo in tmoConf:
+        # read the TMO config template
+        tmo = tmo_config.from_yaml('templates/tmo_config.yaml')
+        tmo.set_trust_mark_owner(tmo["url"])
+
+        p(tmo)
+        sys.exit()
+        
         conf = {
             'testbed_domain': 'oidfed.lab.surf.nl'
         }
@@ -465,17 +531,17 @@ def main(argv):
         tmoConf[tmo]['trust_mark_issuers'] = {}
         # loop over TMs for this TMO
         for tm in tmoDel['trust_marks']:
-            p(tm["trust_mark_id"])
+            #p(tm["trust_mark_id"])
             #p(tm["trust_mark_issuers"])
             for tmi in tm["trust_mark_issuers"]:
                 tmoConf[tmo]['trust_mark_issuers'][tmi['entity_id']] = tmi['delegation_jwt']
 
         # Put JWKS and delegation JWT in config so we can add it to the TA config
-        pj(tmoConf)
+        #pj(tmoConf)
 
 
     # Add Trust Mark Issuers
-    # This are stand alone TMIs. Some TAs may also be TMIs, that is part of TA config
+    # These are stand alone TMIs. Some TAs may also be TMIs, that is part of TA config
     # Some TMIs may be issuing delegated TMIs for a given TMO
     for tmi in tmiConf.keys():
         fedTMI = {
@@ -493,7 +559,7 @@ def main(argv):
     #
     for ra in raConf.keys():
         # read the TA config template
-        ta = EntityConfig.from_yaml('templates/ta_config.yaml')
+        ta = ta_config.from_yaml('templates/ta_config.yaml')
         #print(ta.get_endpoints())  # prints the server port from the YAML file
         
         #entity_id
@@ -506,51 +572,41 @@ def main(argv):
             # TODO: for edugain replace with proper YAML handling
             # TODO: proper TMI handling
             # Add REFEDs as SIRTFI trustmark owner
+
             ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
+
 
             # Copy over edugain policy template 
             os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
 
         else:
-            # TODO: proper TMI handling
-            conf = {
-                #'entity_id': raConf[ra]['ta_url'],
-                #'ta': 'https://edugain.oidfed.lab.surf.nl',
-                #'orgname': raConf[ra]['name'],
-                #'refeds_tmo_url': 'https://refeds.oidfed.lab.surf.nl',
-                #'refeds_jwks': tmoConf['refeds']['jwks'],
-                #'edugain_member_tmi_url': 'https://edugain.oidfed.lab.surf.nl',
-                #'refeds_sirtfi_tmi_url': raConf[ra]['ta_url'],
-                #'refeds_delegation_jwt': tmoConf['refeds']['trust_mark_issuers'][raConf[ra]['ta_url']]
-            }
-
             # for now all Tas have eduGAIN as the parent
             ta.add_authority_hint(raConf["edugain"]['ta_url'])
 
-            # Add REFEDs as SIRTFI trustmark owner
-            ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
+            # Add TMOs to the TAs
+            for tmo in tmoConf:
+                if ta.get_entity_id() in tmoConf[tmo]["trust_mark_issuers"]:
+                    p("Found TMI " + tmo + " I must issue for")
+                #p(ta.get_entity_id())
+                #p(tmoConf[tmo]["trust_mark_issuers"].keys())
+
+                    # Add trustmark owner
+                    ta.add_trust_mark_owner(trust_mark_id=tmoConf[tmo]["trust_mark_id"], 
+                                            entity_id=tmoConf[tmo]["url"],
+                                            jwks=tmoConf[tmo]['jwks'])
+
+                    # Add TrustMark Spec so this TA can be a TMI
+                    ta.add_trust_mark_specs(trust_mark_id=tmoConf[tmo]["trust_mark_id"],
+                                            lifetime=86400,  
+                                            ref=tmoConf[tmo]["ref"], 
+                                            delegation_jwt=tmoConf[tmo]["trust_mark_issuers"][ta.get_entity_id()], 
+                                            checker_type="none")
 
             # Add eduGAIN and REFEDs as trustmark issuers
             ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer='https://edugain.oidfed.lab.surf.nl')
             ta.add_trust_mark(trust_mark_id="https://refeds.org/sirtfi", trust_mark_issuer=raConf[ra]['ta_url'])
 
             # Add eduGAIN as eduGAIN Membership TMI
-            #ta.add_trust_mark_spec()
-
-
-            #trust_mark_specs:
-            #  - trust_mark_id: "https://refeds.org/sirtfi"
-            #    lifetime: 86400
-            #    ref: "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf"
-            #    delegation_jwt: $refeds_delegation_jwt
-            #    checker:
-            #      type: none
-
-            #with open('templates/ta_config.yaml', 'r') as f:
-            #    src = Template(f.read())
-            #    result = src.substitute(conf)
-            #    write_file(result, TESTBED_PATH+'/' +ra+ '/data/config.yaml', mkpath=False, overwrite=True)
-
             os.popen('cp templates/ta_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
         
         # Write config to file
