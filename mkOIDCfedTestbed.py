@@ -147,6 +147,38 @@ class tmo_config:
     def set_trust_mark_owner(self, trust_mark_owner):
         self.trust_mark_owner = trust_mark_owner
 
+    def add_trust_mark(self, trust_mark_id, trust_mark_issuers, delegation_lifetime=86400, logo_uri=None, ref=None):
+        tm = {}
+        tm['trust_mark_id'] = trust_mark_id
+        tm['delegation_lifetime'] = delegation_lifetime
+        tm['logo_uri'] = logo_uri                        
+        tm['ref'] = ref
+        tm['trust_mark_issuers'] =[]
+        for tmi in trust_mark_issuers:  
+            tm['trust_mark_issuers'].append({"entity_id": tmi}) 
+        self.trust_marks.append(tm)
+
+class trustmark:
+    def __init__(self):
+        self.trust_mark_id = None
+        self.delegation_lifetime = None
+        self.ref = []
+        self.logo_uri=None
+        self.trust_mark_issuers = None
+
+    def set_delegation_lifetime(self, delegation_lifetime):
+        self.delegation_lifetime = delegation_lifetime     
+
+    def set_ref(self, ref):
+        self.ref = ref
+
+    def set_logo_uri(self, logo_uri):
+        self.logo_uri = logo_uri
+
+    def add_trust_mark_issuers(self, entity_id):
+        self.trust_mark_issuers = []
+        self.trust_mark_issuers.append({"entityid": entity_id})
+
 class ta_config:
     def __init__(self):
         self.server_port = None
@@ -411,8 +443,14 @@ def main(argv):
             "tas": ["edugain"],
             "jwks": "",
             "trust_mark_id": "https://refeds.org/sirtfi",
-            "ref": "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf"
-
+            "ref": "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf",
+            "trust_mark_issuers": [
+                "https://nl.surfconext"+ TESTBED_BASEURL,
+                "https://it.idem"+ TESTBED_BASEURL,
+                "https://us.incommon"+ TESTBED_BASEURL,
+                "https://fi.haka"+ TESTBED_BASEURL,
+                "https://se.swamid"+ TESTBED_BASEURL
+            ]
         }, 
 
     }
@@ -493,21 +531,26 @@ def main(argv):
     # TMOs are not operational infra so do not need to be in the docker compose!
     # They do need config so we can call a TMO to generate its TM delegation JWT
     # TODO: handle this with propper yaml parsing
-    for tmo in tmoConf:
+    for thisTMO in tmoConf:
         # read the TMO config template
         tmo = tmo_config.from_yaml('templates/tmo_config.yaml')
-        tmo.set_trust_mark_owner(tmo["url"])
+        print(tmoConf[thisTMO])
+        tmo.set_trust_mark_owner(trust_mark_owner=tmoConf[thisTMO]["url"])
+        tmo.add_trust_mark(trust_mark_id=tmoConf[thisTMO]["trust_mark_id"], 
+                           trust_mark_issuers=tmoConf[thisTMO]["trust_mark_issuers"]
+                           )
+        
+        tmo.to_yaml(TESTBED_PATH+'/' +thisTMO+ '/data/tm-delegation.yaml')
 
-        p(tmo)
         sys.exit()
         
-        conf = {
-            'testbed_domain': 'oidfed.lab.surf.nl'
-        }
-        with open('templates/'+tmo+'_tm-delegation.yaml', 'r') as f:
-            src = Template(f.read())
-            result = src.substitute(conf)
-            write_file(result, TESTBED_PATH+'/' +tmo+ '/data/tm-delegation.yaml', mkpath=False, overwrite=True)
+#        conf = {
+ #           'testbed_domain': 'oidfed.lab.surf.nl'
+ #       }
+#        with open('templates/'+tmo+'_tm-delegation.yaml', 'r') as f:
+#            src = Template(f.read())
+#            result = src.substitute(conf)
+#            write_file(result, TESTBED_PATH+'/' +tmo+ '/data/tm-delegation.yaml', mkpath=False, overwrite=True)
 
         # Now run the TMO docker container to generate delegation jwt on the fly
         try:
