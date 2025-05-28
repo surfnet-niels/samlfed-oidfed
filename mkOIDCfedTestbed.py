@@ -352,7 +352,7 @@ class ta_config:
 
 def main(argv):
 
-    ROOTPATH='.'
+    ROOTPATH=os.getcwd()
     TESTBED_PATH = ROOTPATH + '/testbed'
     CONFIG_PATH = TESTBED_PATH + '/config/'
     INPUT_PATH = ROOTPATH + '/feeds/'
