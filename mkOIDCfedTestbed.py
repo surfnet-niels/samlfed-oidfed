@@ -457,7 +457,6 @@ def main(argv):
     #
     # Make sure we have all config dirs
     # TODO: make function for this
-    #os.makedirs(TESTBED_PATH+'/edugain', mode=0o777, exist_ok=True)   
     os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
     for ra in raConf.keys():
         os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
@@ -531,53 +530,39 @@ def main(argv):
     # TMOs are not operational infra so do not need to be in the docker compose!
     # They do need config so we can call a TMO to generate its TM delegation JWT
     # TODO: handle this with propper yaml parsing
-    for thisTMO in tmoConf:
+    for this_tmo in tmoConf:
         # read the TMO config template
         tmo = tmo_config.from_yaml('templates/tmo_config.yaml')
-        print(tmoConf[thisTMO])
-        tmo.set_trust_mark_owner(trust_mark_owner=tmoConf[thisTMO]["url"])
-        tmo.add_trust_mark(trust_mark_id=tmoConf[thisTMO]["trust_mark_id"], 
-                           trust_mark_issuers=tmoConf[thisTMO]["trust_mark_issuers"]
+        tmo.set_trust_mark_owner(trust_mark_owner=tmoConf[this_tmo]["url"])
+        tmo.add_trust_mark(trust_mark_id=tmoConf[this_tmo]["trust_mark_id"], 
+                           trust_mark_issuers=tmoConf[this_tmo]["trust_mark_issuers"]
                            )
-        
-        tmo.to_yaml(TESTBED_PATH+'/' +thisTMO+ '/data/tm-delegation.yaml')
-
-        sys.exit()
-        
-#        conf = {
- #           'testbed_domain': 'oidfed.lab.surf.nl'
- #       }
-#        with open('templates/'+tmo+'_tm-delegation.yaml', 'r') as f:
-#            src = Template(f.read())
-#            result = src.substitute(conf)
-#            write_file(result, TESTBED_PATH+'/' +tmo+ '/data/tm-delegation.yaml', mkpath=False, overwrite=True)
+        tmo.to_yaml(TESTBED_PATH+'/' +this_tmo+ '/data/tm-delegation.yaml')
 
         # Now run the TMO docker container to generate delegation jwt on the fly
+        docker_cmd = 'docker run --rm --user "1000":"1000" -v "'+ TESTBED_PATH+'/' +this_tmo+'/data:/refeds" myoidc/oidfed-gota /tacli delegation --json /'+this_tmo+'/tm-delegation.yaml' 
         try:
-            #os.popen('docker run --rm --user "${UID}":"${GID}" -v "'+ TESTBED_PATH+'/' +tmo+'/data:/refeds" myoidc/oidfed-gota /tacli delegation --json /'+tmo+'/tm-delegation.yaml')
-            os.popen('docker run --rm --user "1000":"1000" -v "'+ TESTBED_PATH+'/' +tmo+'/data:/refeds" myoidc/oidfed-gota /tacli delegation --json /'+tmo+'/tm-delegation.yaml')
+            os.popen(docker_cmd)
         except:
-            p("Could not create delegation JWT for TMO " + tmo) 
+            p("Could not create delegation JWT for TMO " + this_tmo + "!\n Tried to run: \n " + docker_cmd)
         
         # the docker might be a bit slow so wait untill the file has been created
-        while not os.path.exists(TESTBED_PATH+'/' +tmo+'/data/tm-delegation.json'):
+        while not os.path.exists(TESTBED_PATH+'/' +this_tmo+'/data/tm-delegation.json'):
             time.sleep(1)
         else:
             # generate JWKS
             try:
-                tmoDel = loadJSON(TESTBED_PATH+'/' +tmo+'/data/tm-delegation.json')
+                tmoDel = loadJSON(TESTBED_PATH+'/' +this_tmo+'/data/tm-delegation.json')
             except:
-                p("Could not parse delegation data for TMO " + tmo + ' in file ' + TESTBED_PATH+'/' +tmo+'/tm-delegation.json') 
+                p("Could not parse delegation data for TMO " + this_tmo + ' in file ' + TESTBED_PATH+'/' +this_tmo+'/tm-delegation.json') 
 
         #pj(tmoDel)
-        tmoConf[tmo]['jwks'] = tmoDel['jwks']
-        tmoConf[tmo]['trust_mark_issuers'] = {}
+        tmoConf[this_tmo]['jwks'] = tmoDel['jwks']
+        tmoConf[this_tmo]['trust_mark_issuers'] = {}
         # loop over TMs for this TMO
         for tm in tmoDel['trust_marks']:
-            #p(tm["trust_mark_id"])
-            #p(tm["trust_mark_issuers"])
             for tmi in tm["trust_mark_issuers"]:
-                tmoConf[tmo]['trust_mark_issuers'][tmi['entity_id']] = tmi['delegation_jwt']
+                tmoConf[this_tmo]['trust_mark_issuers'][tmi['entity_id']] = tmi['delegation_jwt']
 
         # Put JWKS and delegation JWT in config so we can add it to the TA config
         #pj(tmoConf)
