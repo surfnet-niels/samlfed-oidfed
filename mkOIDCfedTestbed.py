@@ -352,7 +352,7 @@ class ta_config:
 
 def main(argv):
 
-    ROOTPATH='/home/niels/dev/samlfed-oidfed'
+    ROOTPATH='.'
     TESTBED_PATH = ROOTPATH + '/testbed'
     CONFIG_PATH = TESTBED_PATH + '/config/'
     INPUT_PATH = ROOTPATH + '/feeds/'
