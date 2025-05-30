@@ -15,10 +15,6 @@ import subprocess
 from string import Template
 import shutil
 
-
-LOGDEBUG = True
-WRITETOLOG = False
-
 ##################################################################################################################################
 #
 # Config and logs handling functions
@@ -28,13 +24,13 @@ def loadJSON(json_file):
    with open(json_file) as json_file:
      return json.load(json_file)
 
-def p(message, writetolog=WRITETOLOG):
+def p(message, writetolog=False):
    if writetolog:
       write_log(message)
    else:
       print(message)
     
-def pj(the_json, writetolog=WRITETOLOG):
+def pj(the_json, writetolog=False):
     p(json.dumps(the_json, indent=4, sort_keys=False), writetolog)
 
 def write_log(message):
@@ -81,6 +77,13 @@ def fetchFile(url, file_path, overwrite=True):
   except:
     p("ERROR: Could not download URL: " + url, LOGDEBUG)
     return False
+
+def expandTestbedURL(fed, testbed_url):
+    fedUrls = []
+    
+    for f in fed:
+        fedUrls.append("https://" + f + "." + testbed_url)                  
+    return fedUrls
 
 def getFeds(ulr, input_path):
     json_file = input_path + 'allfeds.json'
@@ -148,15 +151,9 @@ class tmo_config:
         self.trust_mark_owner = trust_mark_owner
 
     def add_trust_mark(self, trust_mark_id, trust_mark_issuers, delegation_lifetime=86400, logo_uri=None, ref=None):
-        tm = {}
-        tm['trust_mark_id'] = trust_mark_id
-        tm['delegation_lifetime'] = delegation_lifetime
-        tm['logo_uri'] = logo_uri                        
-        tm['ref'] = ref
-        tm['trust_mark_issuers'] =[]
-        for tmi in trust_mark_issuers:  
-            tm['trust_mark_issuers'].append({"entity_id": tmi}) 
-        self.trust_marks.append(tm)
+        tm = trustmark()
+        tm.add(trust_mark_id, trust_mark_issuers, delegation_lifetime, logo_uri, ref)
+        self.trust_marks.append(tm.asdict())
 
 class trustmark:
     def __init__(self):
@@ -166,6 +163,32 @@ class trustmark:
         self.logo_uri=None
         self.trust_mark_issuers = None
 
+    def asdict(self):
+        d = {
+            'trust_mark_id': self.trust_mark_id,
+            'delegation_lifetime': self.delegation_lifetime,
+            'ref': self.ref,
+            'logo_uri': self.logo_uri
+        }
+
+        tmis = []
+        for tmi in self.trust_mark_issuers:
+            tmis.append({'entity_id': tmi})
+        
+        d['trust_mark_issuers'] = tmis
+
+        return d
+
+    def add(self, trust_mark_id, trust_mark_issuers, delegation_lifetime=86400, logo_uri=None, ref=None):
+        self.trust_mark_id = trust_mark_id
+        self.delegation_lifetime = delegation_lifetime
+        self.logo_uri = logo_uri                        
+        self.ref = ref
+        self.trust_mark_issuers =[]
+        for tmi in trust_mark_issuers:  
+            self.trust_mark_issuers.append(tmi) 
+        
+    
     def set_delegation_lifetime(self, delegation_lifetime):
         self.delegation_lifetime = delegation_lifetime     
 
@@ -175,7 +198,7 @@ class trustmark:
     def set_logo_uri(self, logo_uri):
         self.logo_uri = logo_uri
 
-    def add_trust_mark_issuers(self, entity_id):
+    def add_issuers(self, entity_id):
         self.trust_mark_issuers = []
         self.trust_mark_issuers.append({"entityid": entity_id})
 
@@ -187,7 +210,31 @@ class trust_mark_spec:
         self.logo_uri= None
         self.delegation_jwt = None
         self.checker = {}
+
+    def asdict(self):
+        d = {
+                'trust_mark_id': self.trust_mark_id,
+                'lifetime': self.lifetime,
+                'ref': self.ref,
+                'logo_uri': self.logo_uri,
+                'checker': self.checker
+            }
         
+        if self.delegation_jwt != None:
+            tas = []
+            for ta in self.trust_anchors:
+                tas.append({'entity_id': ta})
+            
+            checker = {
+                'type': 'trust_path',
+                'config': { 'trust_anchors': tas }
+            }
+            d.update({'checker': checker})
+        else:
+            d.update({'checker': self.checker})
+
+        return d
+
     def set_trust_mark_id(self, trust_mark_id):
         self.trust_mark_id = trust_mark_id
 
@@ -370,7 +417,7 @@ class ta_config:
        spec.set_delegation_jwt(delegation_jwt)
        spec.add_checker(checker_type, trust_anchors)
 
-       self.trust_mark_specs.append(spec)
+       self.trust_mark_specs.append(spec.asdict())
 
     def get_trust_mark_specs(self):
         return self.trust_mark_specs
@@ -392,6 +439,8 @@ class ta_config:
         return self.trust_mark_owners
 
 def main(argv):
+    LOGDEBUG = True
+    WRITETOLOG = False
 
     ROOTPATH=os.getcwd()
     TESTBED_PATH = ROOTPATH + '/testbed'
@@ -416,8 +465,8 @@ def main(argv):
     else:
         allFeds = loadJSON(INPUT_PATH + 'allfeds.json')
 
+    # Read Feds into Config, provide an array of Fed names to filter
     raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
-
 
     # Add eduGAIN as a TA
     raConf['edugain'] = {
@@ -460,7 +509,7 @@ def main(argv):
     tmiConf = {
         "edugain": {
             "name": "eduGAIN Membership Trustmark Issuer",
-            "url": "https://erasmus-plus." + TESTBED_BASEURL,
+            "url": "https://edugain." + TESTBED_BASEURL,
             "tas": ["edugain"],
             "trust_mark_id": "https://edugain.org/member",
             "logo_uri": "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
@@ -480,17 +529,16 @@ def main(argv):
     tmoConf = {
         "refeds": {
             "name": "REFEDs Trustmark Owner",
-            "url": "https://refeds." + TESTBED_BASEURL,
             "tas": ["edugain"],
-            "jwks": "",
+            "jwks": None,
             "trust_mark_id": "https://refeds.org/sirtfi",
             "ref": "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf",
             "trust_mark_issuers": [
-                "https://nl.surfconext"+ TESTBED_BASEURL,
-                "https://it.idem"+ TESTBED_BASEURL,
-                "https://us.incommon"+ TESTBED_BASEURL,
-                "https://fi.haka"+ TESTBED_BASEURL,
-                "https://se.swamid"+ TESTBED_BASEURL
+                "nl.surfconext",
+                "it.idem",
+                "us.incommon",
+                "fi.haka",
+                "se.swamid"
             ]
         }, 
 
@@ -565,6 +613,7 @@ def main(argv):
 
     # END Build docker-compose container definition
 
+
     # Build configuration for various containers
 
     # Add Trustmark Owners
@@ -574,9 +623,10 @@ def main(argv):
     for this_tmo in tmoConf:
         # read the TMO config template
         tmo = tmo_config.from_yaml('templates/tmo_config.yaml')
-        tmo.set_trust_mark_owner(trust_mark_owner=tmoConf[this_tmo]["url"])
+        tmo.set_trust_mark_owner(trust_mark_owner="https://" +this_tmo +"." + TESTBED_BASEURL)
+        
         tmo.add_trust_mark(trust_mark_id=tmoConf[this_tmo]["trust_mark_id"], 
-                           trust_mark_issuers=tmoConf[this_tmo]["trust_mark_issuers"]
+                           trust_mark_issuers=expandTestbedURL(tmoConf[this_tmo]["trust_mark_issuers"],TESTBED_BASEURL)
                            )
         tmo.to_yaml(TESTBED_PATH+'/' +this_tmo+ '/data/tm-delegation.yaml')
 
@@ -629,11 +679,9 @@ def main(argv):
     for ra in raConf.keys():
         # read the TA config template
         ta = ta_config.from_yaml('templates/ta_config.yaml')
-        #print(ta.get_endpoints())  # prints the server port from the YAML file
-        
-        #entity_id
+
+        # set entity_id & organization_name
         ta.set_entity_id(raConf[ra]["ta_url"])
-        #organization_name
         ta.set_organization_name(raConf[ra]["display_name"])
 
         # Update values as needed
@@ -660,10 +708,9 @@ def main(argv):
 
             # Add TMOs to the TAs
             for tmo in tmoConf:
+                # If we find a TA in the TMO config we need to add it, to make this TA an TMI on behalf of the TMO
                 if ta.get_entity_id() in tmoConf[tmo]["trust_mark_issuers"]:
                     p("Found TMI " + tmo + " I must issue for")
-                #p(ta.get_entity_id())
-                #p(tmoConf[tmo]["trust_mark_issuers"].keys())
 
                     # Add trustmark owner
                     ta.add_trust_mark_owner(trust_mark_id=tmoConf[tmo]["trust_mark_id"], 
@@ -678,6 +725,7 @@ def main(argv):
                                             checker_type="none")
 
             # Add eduGAIN and REFEDs as trustmark issuers
+            # ToDo: read this from config
             ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer='https://edugain.oidfed.lab.surf.nl')
             ta.add_trust_mark(trust_mark_id="https://refeds.org/sirtfi", trust_mark_issuer=raConf[ra]['ta_url'])
 
