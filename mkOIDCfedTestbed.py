@@ -179,6 +179,41 @@ class trustmark:
         self.trust_mark_issuers = []
         self.trust_mark_issuers.append({"entityid": entity_id})
 
+class trust_mark_spec:
+    def __init__(self):
+        self.trust_mark_id = None
+        self.lifetime = None
+        self.ref = []
+        self.logo_uri= None
+        self.delegation_jwt = None
+        self.checker = {}
+        
+    def set_trust_mark_id(self, trust_mark_id):
+        self.trust_mark_id = trust_mark_id
+
+    def set_lifetime(self, lifetime):
+        self.lifetime = lifetime
+
+    def set_ref(self, ref):
+        self.ref = ref
+
+    def set_logo_uri(self, logo_uri):
+        self.logo_uri = logo_uri
+
+    def set_delegation_jwt(self, delegation_jwt):
+        self.delegation_jwt = delegation_jwt
+ 
+    def add_checker(self, checker_type=None, trust_anchors=[]):
+        if checker_type == 'trust_path':
+            self.checker = {
+                'type': 'trust_path',
+                'config': { 'trust_anchors': [] }
+            }
+            for ta in trust_anchors:
+                self.checker['config']['trust_anchors'].append({'entity_id': ta})
+        else:
+            self.checker = None
+
 class ta_config:
     def __init__(self):
         self.server_port = None
@@ -219,17 +254,20 @@ class ta_config:
                     config.endpoints[endpoint_name] = {'path': endpoint_data['path']}
             if 'trust_mark_specs' in data:
                 for trust_mark_spec in data['trust_mark_specs']:
-                    spec = {}
-                    if 'trust_mark_id' in trust_mark_spec:
-                        spec['trust_mark_id'] = trust_mark_spec['trust_mark_id']
+                    spec = trust_mark_spec()
+                    if 'trust_mark_id' in trust_mark_spec:         
+                        spec.set_trust_mark_id(trust_mark_spec['trust_mark_id'])
                     if 'lifetime' in trust_mark_spec:
-                        spec['lifetime'] = trust_mark_spec['lifetime']
+                        spec.set_lifetime(trust_mark_spec['lifetime'])
                     if 'ref' in trust_mark_spec:
-                        spec['ref'] = trust_mark_spec['ref']
+                        spec.set_ref(trust_mark_spec['ref'])
                     if 'delegation_jwt' in trust_mark_spec:
-                        spec['delegation_jwt'] = trust_mark_spec['delegation_jwt']
+                        spec.set_delegation_jwt(trust_mark_spec['delegation_jwt'])
                     if 'checker' in trust_mark_spec:
-                        spec['checker'] = {'type': trust_mark_spec['checker']['type']}
+                        if trust_mark_spec['checker'] == 'trust_path':
+                            spec.set_checker(trust_mark_spec['checker'], trust_mark_spec['checker']['config']['trust_anchors'])
+                        else:
+                            spec.set_checker(trust_mark_spec['checker'])
                     config.trust_mark_specs.append(spec)
             if 'trust_mark_owners' in data:
                 for trust_mark_id, owner_data in data['trust_mark_owners'].items():
@@ -322,14 +360,17 @@ class ta_config:
     def get_endpoints(self):
         return self.endpoints
 
-    def add_trust_mark_specs(self, trust_mark_id, ref, delegation_jwt, lifetime=86400, checker_type="none"):
-        if 'trust_mark_specs' not in self.__dict__:
-            self.trust_mark_specs = []
-        self.trust_mark_specs.append({'trust_mark_id': trust_mark_id, 
-                                      "lifetime": lifetime,
-                                      'ref': ref,
-                                      'delegation_jwt': delegation_jwt,
-                                      "checker": {"type" : checker_type} })   
+    def add_trust_mark_spec(self, trust_mark_id, ref, delegation_jwt = None, logo_uri = None, lifetime = 86400, checker_type=None,trust_anchors=[]):
+       spec = trust_mark_spec()
+
+       spec.set_trust_mark_id(trust_mark_id)
+       spec.set_lifetime(lifetime)
+       spec.set_ref(ref)
+       spec.set_logo_uri(logo_uri)
+       spec.set_delegation_jwt(delegation_jwt)
+       spec.add_checker(checker_type, trust_anchors)
+
+       self.trust_mark_specs.append(spec)
 
     def get_trust_mark_specs(self):
         return self.trust_mark_specs
@@ -602,7 +643,13 @@ def main(argv):
             # Add REFEDs as SIRTFI trustmark owner
 
             ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
-
+            ta.add_trust_mark_spec(trust_mark_id="https://edugain.org/member", 
+                                    ref="https://www.edugain.org", 
+                                    logo_uri= "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
+                                    lifetime=86400, 
+                                    checker_type="trust_path",
+                                    trust_anchors=["https://foo.org", "https://bar.org"]
+                                    )
 
             # Copy over edugain policy template 
             os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
