@@ -275,6 +275,7 @@ class ta_config:
         self.trust_mark_specs = []
         self.trust_marks = []
         self.trust_mark_owners = {}
+        self.trust_mark_issuers = []
 
     def from_yaml(file_path):
         config = ta_config()
@@ -328,6 +329,12 @@ class ta_config:
                 for trust_mark in data['trust_marks']:
                     if 'trust_mark_id' in trust_mark and 'trust_mark_issuer' in trust_mark:
                         config.trust_marks.append(trust_mark)
+            if 'trust_mark_issuers' in data:
+                for trust_mark_id, issuer_data in data['trust_mark_issuers'].items():
+                    issuers = []
+                    if 'entity_id' in issuer_data:
+                        issuer['entity_id'] = issuer_data['entity_id']
+                    config.trust_mark_issuers.append = issuer            
         return config
 
     def to_yaml(self, file_path):
@@ -437,6 +444,12 @@ class ta_config:
 
     def get_trust_mark_owners(self):
         return self.trust_mark_owners
+    
+    def add_trust_mark_issuer(self, trust_mark_id, entity_id):
+        if 'trust_mark_issuers' not in self.__dict__:
+            self.trust_mark_issuers = []
+        self.trust_mark_issuers.append({trust_mark_id: entity_id}) 
+
 
 def main(argv):
     LOGDEBUG = True
@@ -624,7 +637,6 @@ def main(argv):
         # read the TMO config template
         tmo = tmo_config.from_yaml('templates/tmo_config.yaml')
         tmo.set_trust_mark_owner(trust_mark_owner="https://" +this_tmo +"." + TESTBED_BASEURL)
-        
         tmo.add_trust_mark(trust_mark_id=tmoConf[this_tmo]["trust_mark_id"], 
                            trust_mark_issuers=expandTestbedURL(tmoConf[this_tmo]["trust_mark_issuers"],TESTBED_BASEURL)
                            )
@@ -687,7 +699,6 @@ def main(argv):
         # Update values as needed
         if ra == 'edugain':
             # TODO: for edugain replace with proper YAML handling
-            # TODO: proper TMI handling
             # Add REFEDs as SIRTFI trustmark owner
 
             ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
@@ -696,8 +707,24 @@ def main(argv):
                                     logo_uri= "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
                                     lifetime=86400, 
                                     checker_type="trust_path",
-                                    trust_anchors=["https://foo.org", "https://bar.org"]
+                                    trust_anchors=expandTestbedURL(["nl.surfconext",
+                                                    "it.idem",
+                                                    "us.incommon",
+                                                    "fi.haka",
+                                                    "se.swamid"],TESTBED_BASEURL)
                                     )
+
+            # Add trustmarks issuers
+            # ToDo: read this from config
+            ta.add_trust_mark_issuer('https://edugain.org/member', expandTestbedURL(["edugain"],TESTBED_BASEURL))
+            ta.add_trust_mark_issuer('https://erasmus-plus.ec.europa.eu', expandTestbedURL(["erasmus-plus"],TESTBED_BASEURL))
+            ta.add_trust_mark_issuer('http://www.csc.fi/haka/member', expandTestbedURL(["fi.haka"],TESTBED_BASEURL))
+            ta.add_trust_mark_issuer('https://puhuri.io',  expandTestbedURL(["puhuri.io"],TESTBED_BASEURL))                        
+            ta.add_trust_mark_issuer('https://incommon.org/federation/member', expandTestbedURL(["us.incommon"],TESTBED_BASEURL))            
+
+            # Add eduGAIN as trustmark
+            # ToDo: read this from config
+            ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer='https://edugain.oidfed.lab.surf.nl')
 
             # Copy over edugain policy template 
             os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 

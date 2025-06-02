@@ -1,0 +1,36 @@
+authority_hints:
+- $ta
+data_location: /data/data
+endpoints:
+  fetch:
+    path: /fetch
+  list:
+    path: /list
+  trust_mark:
+    path: /trust_mark
+  trust_mark_list:
+    path: /trust_mark/list
+  trust_mark_status:
+    path: /trust_mark/status
+entity_id: $entity_id
+human_readable_storage: true
+metadata_policy_file: /data/metadata-policy.json
+organization_name: $orgname
+server_port: 8765
+signing_key_file: /data/signing.key
+trust_mark_owners:
+  https://refeds.org/sirtfi:
+    entity_id: $refeds_tmo_url
+    jwks: $refeds_jwks
+trust_mark_specs:
+- checker:
+    type: none
+  delegation_jwt: $refeds_delegation_jwt
+  lifetime: 86400
+  ref: https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf
+  trust_mark_id: https://refeds.org/sirtfi
+trust_marks:
+- trust_mark_id: https://edugain.org/member
+  trust_mark_issuer: $edugain_member_tmi_url
+- trust_mark_id: https://refeds.org/sirtfi
+  trust_mark_issuer: $refeds_sirtfi_tmi_url
