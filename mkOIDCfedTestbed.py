@@ -275,7 +275,7 @@ class ta_config:
         self.trust_mark_specs = []
         self.trust_marks = []
         self.trust_mark_owners = {}
-        self.trust_mark_issuers = []
+        self.trust_mark_issuers = {}
 
     def from_yaml(file_path):
         config = ta_config()
@@ -331,7 +331,7 @@ class ta_config:
                         config.trust_marks.append(trust_mark)
             if 'trust_mark_issuers' in data:
                 for trust_mark_id, issuer_data in data['trust_mark_issuers'].items():
-                    issuers = []
+                    issuers = {}
                     if 'entity_id' in issuer_data:
                         issuer['entity_id'] = issuer_data['entity_id']
                     config.trust_mark_issuers.append = issuer            
@@ -447,8 +447,8 @@ class ta_config:
     
     def add_trust_mark_issuer(self, trust_mark_id, entity_id):
         if 'trust_mark_issuers' not in self.__dict__:
-            self.trust_mark_issuers = []
-        self.trust_mark_issuers.append({trust_mark_id: entity_id}) 
+            self.trust_mark_issuers = {}
+        self.trust_mark_issuers.update({trust_mark_id: entity_id}) 
 
 
 def main(argv):
