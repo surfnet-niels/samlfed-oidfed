@@ -19,4 +19,5 @@ endpoints:
     path: "/trust_mark/list"
 trust_mark_specs: {}
 trust_mark_owners: {}
+trust_mark_issuers: {}
 trust_marks: []

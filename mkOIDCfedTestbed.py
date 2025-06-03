@@ -78,12 +78,16 @@ def fetchFile(url, file_path, overwrite=True):
     p("ERROR: Could not download URL: " + url, LOGDEBUG)
     return False
 
-def expandTestbedURL(fed, testbed_url):
+def expandTestbedURLs(feds, testbed_url):
     fedUrls = []
     
-    for f in fed:
-        fedUrls.append("https://" + f + "." + testbed_url)                  
+    for fed in feds:
+        p(fed)
+        fedUrls.append(expandTestbedURL(fed, testbed_url))                  
     return fedUrls
+
+def expandTestbedURL(fed, testbed_url):
+    return "https://" + fed + "." + testbed_url
 
 def getFeds(ulr, input_path):
     json_file = input_path + 'allfeds.json'
@@ -112,6 +116,12 @@ def parseFeds(fedsJson,fedsInUse):
             else:
                 p(fedID + " skipped as not in use due to config")
     return RAs 
+
+##################################################################################################################################
+#
+# Object classes for various OIDFed Entities functions
+#
+##################################################################################################################################
 
 class tmo_config:
     def __init__(self):
@@ -450,6 +460,156 @@ class ta_config:
             self.trust_mark_issuers = {}
         self.trust_mark_issuers.update({trust_mark_id: entity_id}) 
 
+class tmi_config:
+    def __init__(self):
+        self.server_port = None
+        self.entity_id = None
+        self.authority_hints = []
+        self.signing_key_file = None
+        self.organization_name = None
+        self.data_location = None
+        self.human_readable_storage = False
+        self.endpoints = {}
+        self.trust_mark_specs = []
+        self.trust_marks = []
+
+    def from_yaml(file_path):
+        config = ta_config()
+        with open(file_path, 'r') as f:
+            data = yaml.safe_load(f)
+            if 'server_port' in data:
+                config.server_port = data['server_port']
+            if 'entity_id' in data:
+                config.entity_id = data['entity_id']
+            if 'authority_hints' in data:
+                config.authority_hints = data['authority_hints']
+            if 'signing_key_file' in data:
+                config.signing_key_file = data['signing_key_file']
+            if 'organization_name' in data:
+                config.organization_name = data['organization_name']
+            if 'data_location' in data:
+                config.data_location = data['data_location']
+            if 'human_readable_storage' in data:
+                config.human_readable_storage = True
+            if 'endpoints' in data:
+                for endpoint_name, endpoint_data in data['endpoints'].items():
+                    config.endpoints[endpoint_name] = {'path': endpoint_data['path']}
+            if 'trust_mark_specs' in data:
+                for trust_mark_spec in data['trust_mark_specs']:
+                    spec = trust_mark_spec()
+                    if 'trust_mark_id' in trust_mark_spec:         
+                        spec.set_trust_mark_id(trust_mark_spec['trust_mark_id'])
+                    if 'lifetime' in trust_mark_spec:
+                        spec.set_lifetime(trust_mark_spec['lifetime'])
+                    if 'ref' in trust_mark_spec:
+                        spec.set_ref(trust_mark_spec['ref'])
+                    if 'delegation_jwt' in trust_mark_spec:
+                        spec.set_delegation_jwt(trust_mark_spec['delegation_jwt'])
+                    if 'checker' in trust_mark_spec:
+                        if trust_mark_spec['checker'] == 'trust_path':
+                            spec.set_checker(trust_mark_spec['checker'], trust_mark_spec['checker']['config']['trust_anchors'])
+                        else:
+                            spec.set_checker(trust_mark_spec['checker'])
+                    config.trust_mark_specs.append(spec)
+            if 'trust_marks' in data:
+                for trust_mark in data['trust_marks']:
+                    if 'trust_mark_id' in trust_mark and 'trust_mark_issuer' in trust_mark:
+                        config.trust_marks.append(trust_mark)         
+        return config
+
+    def to_yaml(self, file_path):
+        with open(file_path, 'w') as f:
+            yaml.dump((self.__dict__), f)
+
+    def set_server_port(self, port):
+        self.server_port = port
+
+    def get_server_port(self):
+        return self.server_port
+
+    def set_entity_id(self, entity_id):
+        self.entity_id = entity_id
+
+    def get_entity_id(self):
+        return self.entity_id
+
+    def add_authority_hint(self, authority_hint):
+        if 'authority_hints' not in self.__dict__:
+            self.authority_hints = []
+        self.authority_hints.append(authority_hint)
+
+    def get_authority_hints(self):
+        return self.authority_hints
+
+    def set_server_port(self, port):
+        self.server_port = port
+
+    def get_server_port(self):
+        return self.server_port
+
+    def set_entity_id(self, entity_id):
+        self.entity_id = entity_id
+
+    def get_entity_id(self):
+        return self.entity_id
+
+    def set_signing_key_file(self, file_path):
+        self.signing_key_file = file_path
+
+    def get_signing_key_file(self):
+        return self.signing_key_file
+
+    def set_organization_name(self, name):
+        self.organization_name = name
+
+    def get_organization_name(self):
+        return self.organization_name
+
+    def set_data_location(self, location):
+        self.data_location = location
+
+    def get_data_location(self):
+        return self.data_location
+
+    def set_human_readable_storage(self, storage):
+        if storage.lower() == 'true':
+            self.human_readable_storage = True
+        else:
+            self.human_readable_storage = False
+
+    def get_human_readable_storage(self):
+        return self.human_readable_storage
+
+    def add_endpoint(self, name, path):
+        if 'endpoints' not in self.__dict__:
+            self.endpoints = {}
+        self.endpoints[name] = {'path': path}
+
+    def get_endpoints(self):
+        return self.endpoints
+
+    def add_trust_mark_spec(self, trust_mark_id, ref, delegation_jwt = None, logo_uri = None, lifetime = 86400, checker_type=None,trust_anchors=[]):
+       spec = trust_mark_spec()
+
+       spec.set_trust_mark_id(trust_mark_id)
+       spec.set_lifetime(lifetime)
+       spec.set_ref(ref)
+       spec.set_logo_uri(logo_uri)
+       spec.set_delegation_jwt(delegation_jwt)
+       spec.add_checker(checker_type, trust_anchors)
+
+       self.trust_mark_specs.append(spec.asdict())
+
+    def get_trust_mark_specs(self):
+        return self.trust_mark_specs
+
+    def add_trust_mark(self, trust_mark_id, trust_mark_issuer):
+        if 'trust_marks' not in self.__dict__:
+            self.trust_marks = []
+        self.trust_marks.append({'trust_mark_id': trust_mark_id, 'trust_mark_issuer': trust_mark_issuer})   
+
+    def get_trust_marks(self):
+        return self.trust_marks
 
 def main(argv):
     LOGDEBUG = True
@@ -470,6 +630,7 @@ def main(argv):
     FETCHEDUGAINURL = True
 
     #
+    # Deployment Configuration
     # Load RAs from eduGAIN
     #   
     if FETCHEDUGAINURL:
@@ -522,20 +683,35 @@ def main(argv):
     tmiConf = {
         "edugain": {
             "name": "eduGAIN Membership Trustmark Issuer",
-            "url": "https://edugain." + TESTBED_BASEURL,
-            "tas": ["edugain"],
-            "trust_mark_id": "https://edugain.org/member",
-            "logo_uri": "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
-            "ref": "",
+            "url": "edugain",
+            "tas": [],
+            "trust_mark_ids": ["https://edugain.org/member"],
+            "tmi_type": "ta"
         },
         "erasmus-plus": {
             "name": "Erasmus+ Trustmark Issuer",
-            "url": "https://erasmus-plus." + TESTBED_BASEURL,
+            "url": "erasmus-plus",
             "tas": ["edugain"],
-            "trust_mark_id": "",
-            "logo_uri": "",
-            "ref": "",
+            "trust_mark_ids": ["https://erasmus-plus.ec.europa.eu"],
+            "tmi_type": "standalone"
         }
+    }
+
+    tmConf = {
+        "https://edugain.org/member": {
+            "name": "eduGAIN Membership",
+            "issuer": "edugain",
+            "logo_uri": "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
+            "ref": "",
+            "lifetime": 86400
+        },
+        "https://erasmus-plus.ec.europa.eu": {
+            "name": "Erasmus+ Trustmark",
+            "issuer": "erasmus-plus",
+            "logo_uri": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Erasmus%2B_Logo.svg/799px-Erasmus%2B_Logo.svg.png",
+            "ref": "https://erasmus-plues.ec.europa.eu/ref",
+            "lifetime": 86400
+        }        
     }
 
     # Config for TMOs
@@ -569,9 +745,11 @@ def main(argv):
     for tmo in tmoConf.keys():
         os.makedirs(TESTBED_PATH+'/' +tmo+ '/data', mode=0o777, exist_ok=True)
 
+    ##################################################################################################################################
     #
     # Build docker-compose container definition
     #
+    ##################################################################################################################################
     tb = {
         "services": {}, 
         "networks": {"caddy": ''}
@@ -638,7 +816,7 @@ def main(argv):
         tmo = tmo_config.from_yaml('templates/tmo_config.yaml')
         tmo.set_trust_mark_owner(trust_mark_owner="https://" +this_tmo +"." + TESTBED_BASEURL)
         tmo.add_trust_mark(trust_mark_id=tmoConf[this_tmo]["trust_mark_id"], 
-                           trust_mark_issuers=expandTestbedURL(tmoConf[this_tmo]["trust_mark_issuers"],TESTBED_BASEURL)
+                           trust_mark_issuers=expandTestbedURLs(tmoConf[this_tmo]["trust_mark_issuers"],TESTBED_BASEURL)
                            )
         tmo.to_yaml(TESTBED_PATH+'/' +this_tmo+ '/data/tm-delegation.yaml')
 
@@ -670,20 +848,33 @@ def main(argv):
         # Put JWKS and delegation JWT in config so we can add it to the TA config
         #pj(tmoConf)
 
-
     # Add Trust Mark Issuers
     # These are stand alone TMIs. Some TAs may also be TMIs, that is part of TA config
     # Some TMIs may be issuing delegated TMIs for a given TMO
-    for tmi in tmiConf.keys():
-        fedTMI = {
-            "image": "'myoidc/oidfed-gota'",
-            "networks": {"caddy": ''},
-            "volumes": [TESTBED_PATH+'/' +tmi+ '/data:/data'],
-            "expose": ["8765"],
-            "stop_grace_period": "'500ms'"
-        }
-        tb['services'][tmi] = fedTMI
-        os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
+    for this_tmi in tmiConf.keys():
+        tmi = tmi_config.from_yaml('templates/tmi_config.yaml')
+
+        tmi.add_authority_hint(expandTestbedURL("edugain",TESTBED_BASEURL))
+        tmi.set_entity_id(expandTestbedURL(tmiConf[this_tmi]["url"],TESTBED_BASEURL))
+        tmi.set_organization_name(tmiConf[this_tmi]["name"])
+
+
+        # Do we have any config for this TMI?
+        if this_tmi in tmiConf:
+            # Is it a 'standalone' TMI? 
+            # (Others might be part of a TA, which we can ignore here, these are configured as part of the TA)
+            if tmiConf[this_tmi]["tmi_type"] == "standalone":
+                for tm in tmConf.keys():
+                    if tm in tmiConf[this_tmi]["trust_mark_ids"]:
+                        tmi.add_trust_mark_spec(trust_mark_id=tm, 
+                                            ref=tmConf[tm]["ref"], 
+                                            logo_uri= tmConf[tm]["logo_uri"],
+                                            lifetime=tmConf[tm]["lifetime"], 
+                                            checker_type="none")
+
+                        tmi.add_trust_mark(tm, expandTestbedURL(tmConf[tm]["issuer"],TESTBED_BASEURL))
+
+    tmi.to_yaml(TESTBED_PATH+'/' +this_tmi+ '/data/config.yaml')  # writes the config to file
 
     #
     # Write config from template for all TAs
@@ -698,6 +889,9 @@ def main(argv):
 
         # Update values as needed
         if ra == 'edugain':
+            # Set eduGAIN as the root
+            ta.add_authority_hint(None)
+
             # TODO: for edugain replace with proper YAML handling
             # Add REFEDs as SIRTFI trustmark owner
 
@@ -707,7 +901,7 @@ def main(argv):
                                     logo_uri= "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
                                     lifetime=86400, 
                                     checker_type="trust_path",
-                                    trust_anchors=expandTestbedURL(["nl.surfconext",
+                                    trust_anchors=expandTestbedURLs(["nl.surfconext",
                                                     "it.idem",
                                                     "us.incommon",
                                                     "fi.haka",
@@ -716,11 +910,11 @@ def main(argv):
 
             # Add trustmarks issuers
             # ToDo: read this from config
-            ta.add_trust_mark_issuer('https://edugain.org/member', expandTestbedURL(["edugain"],TESTBED_BASEURL))
-            ta.add_trust_mark_issuer('https://erasmus-plus.ec.europa.eu', expandTestbedURL(["erasmus-plus"],TESTBED_BASEURL))
-            ta.add_trust_mark_issuer('http://www.csc.fi/haka/member', expandTestbedURL(["fi.haka"],TESTBED_BASEURL))
-            ta.add_trust_mark_issuer('https://puhuri.io',  expandTestbedURL(["puhuri.io"],TESTBED_BASEURL))                        
-            ta.add_trust_mark_issuer('https://incommon.org/federation/member', expandTestbedURL(["us.incommon"],TESTBED_BASEURL))            
+            ta.add_trust_mark_issuer('https://edugain.org/member', expandTestbedURL("edugain",TESTBED_BASEURL))
+            ta.add_trust_mark_issuer('https://erasmus-plus.ec.europa.eu', expandTestbedURL("erasmus-plus",TESTBED_BASEURL))
+            ta.add_trust_mark_issuer('http://www.csc.fi/haka/member', expandTestbedURL("fi.haka",TESTBED_BASEURL))
+            ta.add_trust_mark_issuer('https://puhuri.io',  expandTestbedURL("puhuri.io",TESTBED_BASEURL))                        
+            ta.add_trust_mark_issuer('https://incommon.org/federation/member', expandTestbedURL("us.incommon",TESTBED_BASEURL))            
 
             # Add eduGAIN as trustmark
             # ToDo: read this from config
@@ -761,11 +955,6 @@ def main(argv):
         
         # Write config to file
         ta.to_yaml(TESTBED_PATH+'/' +ra+ '/data/config.yaml')  # writes the config to file
-
-    #
-    # TODO: Write config from template for all TrustMark Issuers
-    #
-
 
     #
     # TODO: Write config from template for all TEST RPs
