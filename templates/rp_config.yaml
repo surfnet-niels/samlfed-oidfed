@@ -1,17 +1,10 @@
 server_addr: 8765
-entity_id: "$entity_id"
-authority_hints:
-  - "$authority"
-trust_anchors:
-$tas
+entity_id: 
+authority_hints: []
+trust_anchors: []
 signing_key_file: "/data/signing.key"
-organization_name: "$orgname"
+organization_name: 
 key_storage: /data
 filter_to_automatic_ops: false
 enable_debug_log: false
-
-trust_marks:
-  - trust_mark_id: "https://edugain.org/member"
-    trust_mark_issuer: "$edugain_member_tmi_url"
-  - trust_mark_id: "https://refeds.org/sirtfi"
-    trust_mark_issuer: "$refeds_sirtfi_tmi_url"
+trust_marks: []
