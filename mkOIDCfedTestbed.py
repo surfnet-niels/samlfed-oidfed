@@ -514,7 +514,7 @@ def main(argv):
     for rp in rpConf.keys():
         caddyConf.append('\n' + rp +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+rp+':8765\n}  ')   
     for tmi in tmiConf.keys():
-        if tmiConf[this_tmi]["tmi_type"] == "standalone":
+        if tmiConf[tmi]["tmi_type"] == "standalone":
             caddyConf.append('\n' + tmi +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+tmi+':8765\n}  ')  
     write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
 

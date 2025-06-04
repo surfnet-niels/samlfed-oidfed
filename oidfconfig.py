@@ -329,7 +329,7 @@ class ta_config:
     def add_trust_mark_issuer(self, trust_mark_id, entity_id):
         if 'trust_mark_issuers' not in self.__dict__:
             self.trust_mark_issuers = {}
-        self.trust_mark_issuers.update({trust_mark_id: entity_id}) 
+        self.trust_mark_issuers.update({entity_id: [trust_mark_id]}) 
 
 class tmi_config:
     def __init__(self):
