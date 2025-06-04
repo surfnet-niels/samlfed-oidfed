@@ -538,7 +538,7 @@ class rp_config:
     def add_trust_anchor(self, trust_anchor):
         if 'trust_anchors' not in self.__dict__:
             self.trust_anchors = []
-        self.trust_anchors.append(trust_anchor)
+        self.trust_anchors.append({"entity_id": trust_anchor})
 
     def get_trust_anchors(self):
         return self.trust_anchors
