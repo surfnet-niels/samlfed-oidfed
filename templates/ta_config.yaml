@@ -3,7 +3,7 @@ entity_id:
 authority_hints: []
 signing_key_file: "/data/signing.key"
 organization_name:
-data_location: "/data/data"
+data_location: "/data"
 human_readable_storage: true
 metadata_policy_file: "/data/metadata-policy.json"
 endpoints:
