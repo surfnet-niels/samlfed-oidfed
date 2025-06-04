@@ -309,12 +309,11 @@ def main(argv):
             "networks": {"caddy": ''},
             "volumes": [
                 TESTBED_PATH+'/' +rp+ '/data:/data',
-                TESTBED_PATH+'/' +rp+ '/config.yaml:/config.yaml:ro'
+                TESTBED_PATH+'/' +rp+ '/data/config.yaml:/config.yaml:ro'
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
         }
-
     # add Caddy
     tb['services']['caddy'] = {
             "image": "'caddy:latest'",
