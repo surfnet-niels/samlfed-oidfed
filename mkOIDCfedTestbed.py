@@ -283,18 +283,28 @@ def main(argv):
 
     # Add TAs
     for ra in raConf.keys():
-        fedRA = {
+        tb['services'][ra] = {
             "image": "'myoidc/oidfed-gota'",
             "networks": {"caddy": ''},
             "volumes": [TESTBED_PATH+'/' +ra+ '/data:/data'],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
         }
-        tb['services'][ra] = fedRA
+
+    # Add (Standalone) TMIs
+    for tmi in tmiConf.keys():
+        if tmiConf[tmi]["tmi_type"] == "standalone":
+            tb['services'][tmi] = {
+                "image": "'myoidc/oidfed-gota'",
+                "networks": {"caddy": ''},
+                "volumes": [TESTBED_PATH+'/' +tmi+ '/data:/data'],
+                "expose": ["8765"],
+                "stop_grace_period": "'500ms'"
+            }
 
     # Add (test) RPs
     for rp in rpConf.keys():
-        fedRP = {
+        tb['services'][rp] = {
             "image": "'myoidc/oidfed-gorp'",
             "networks": {"caddy": ''},
             "volumes": [
@@ -304,7 +314,6 @@ def main(argv):
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
         }
-        tb['services'][rp] = fedRP
 
     # add Caddy
     tb['services']['caddy'] = {
