@@ -468,6 +468,8 @@ def main(argv):
     #
     caddyConf = []
     caddyConf.append('{\n     email niels.vandijk@surf.nl\n}\n')
+    # Add overview page
+    caddyConf.append('\noverview.'+ TESTBED_BASEURL + ' {\n     reverse_proxy overview:8765\n}  ')
 
     for ra in raConf.keys():
         caddyConf.append('\n' + ra +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+ra+':8765\n}  ')
