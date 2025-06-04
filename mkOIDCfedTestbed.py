@@ -98,7 +98,7 @@ def getFeds(ulr, input_path):
     with open(json_file) as json_file:
         return json.load(json_file)
 
-def parseFeds(fedsJson,fedsInUse):
+def parseFeds(fedsJson,fedsInUse, baseURL):
     RAs = {}
 
     for fedID in fedsJson.keys(): 
@@ -113,7 +113,7 @@ def parseFeds(fedsJson,fedsInUse):
                             'reg_auth': fedsJson[fedID]['reg_auth'],
                             'country_code': ''.join(fedsJson[fedID].get('country_code')[i]),
                             'md_url': [fedsJson[fedID]['metadata_url']],
-                            'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.oidfed.lab.surf.nl'}
+                            'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.' + baseURL}
 
                         RAs[fedID_country] = thisFedData
             else:
@@ -149,7 +149,7 @@ def main(argv):
         allFeds = loadJSON(INPUT_PATH + 'allfeds.json')
 
     # Read Feds into Config, provide an array of Fed names to filter
-    raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
+    raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'], TESTBED_BASEURL)
 
     # Add eduGAIN as a TA
     raConf["edugain"] = {
@@ -158,7 +158,7 @@ def main(argv):
         "reg_auth": '',
         "country_code": '',
         "md_url": '',
-        "ta_url": 'https://edugain.oidfed.lab.surf.nl'
+        "ta_url": 'https://edugain.oidf.lab.surf.nl'
     }
 
     #
@@ -425,7 +425,7 @@ def main(argv):
             # TODO: for edugain replace with proper YAML handling
             # Add REFEDs as SIRTFI trustmark owner
 
-            ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id="https://refeds.oidfed.lab.surf.nl",jwks=tmoConf['refeds']['jwks'])
+            ta.add_trust_mark_owner(trust_mark_id="https://refeds.org/sirtfi", entity_id=expandTestbedURL("refeds",TESTBED_BASEURL),jwks=tmoConf['refeds']['jwks'])
             ta.add_trust_mark_spec(trust_mark_id="https://edugain.org/member", 
                                     ref="https://www.edugain.org", 
                                     logo_uri= "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
@@ -448,7 +448,7 @@ def main(argv):
 
             # Add eduGAIN as trustmark
             # ToDo: read this from config
-            ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer='https://edugain.oidfed.lab.surf.nl')
+            ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer=expandTestbedURL("edugain",TESTBED_BASEURL))
 
             # Copy over edugain policy template 
             os.popen('cp templates/edugain_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
@@ -465,11 +465,11 @@ def main(argv):
 
                     # Add trustmark owner
                     ta.add_trust_mark_owner(trust_mark_id=tmoConf[tmo]["trust_mark_id"], 
-                                            entity_id=tmoConf[tmo]["url"],
+                                            entity_id=expandTestbedURL(tmo,TESTBED_BASEURL),
                                             jwks=tmoConf[tmo]['jwks'])
 
                     # Add TrustMark Spec so this TA can be a TMI
-                    ta.add_trust_mark_specs(trust_mark_id=tmoConf[tmo]["trust_mark_id"],
+                    ta.add_trust_mark_spec(trust_mark_id=tmoConf[tmo]["trust_mark_id"],
                                             lifetime=86400,  
                                             ref=tmoConf[tmo]["ref"], 
                                             delegation_jwt=tmoConf[tmo]["trust_mark_issuers"][ta.get_entity_id()], 
@@ -477,7 +477,7 @@ def main(argv):
 
             # Add eduGAIN and REFEDs as trustmark issuers
             # ToDo: read this from config
-            ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer='https://edugain.oidfed.lab.surf.nl')
+            ta.add_trust_mark(trust_mark_id="https://edugain.org/member", trust_mark_issuer=expandTestbedURL("edugain",TESTBED_BASEURL))
             ta.add_trust_mark(trust_mark_id="https://refeds.org/sirtfi", trust_mark_issuer=raConf[ra]['ta_url'])
 
             # Add eduGAIN as eduGAIN Membership TMI

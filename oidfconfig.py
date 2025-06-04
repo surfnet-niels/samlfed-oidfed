@@ -103,6 +103,7 @@ class trust_mark_spec:
         self.logo_uri= None
         self.delegation_jwt = None
         self.checker = {}
+        self.trust_anchors = []
 
     def asdict(self):
         d = {
