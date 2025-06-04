@@ -195,6 +195,9 @@ def main(argv):
     # Make sure we have all config dirs
     # TODO: make function for this
     os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
+    os.makedirs(TESTBED_PATH+'/overview/data/conf', mode=0o777, exist_ok=True)
+    os.makedirs(TESTBED_PATH+'/overview/data/html', mode=0o777, exist_ok=True)
+
     for ra in raConf.keys():
         os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
     for rp in rpConf.keys():
@@ -265,8 +268,8 @@ def main(argv):
             "image": "'nginx:1-alpine'",
             "networks": {"caddy": ''},
             "volumes": [
-                TESTBED_PATH + "/nginx/default.conf:/etc/nginx/conf.d/default.conf",
-                TESTBED_PATH + "/nginx/data:/var/www/html",
+                TESTBED_PATH + "/overview/conf/default.conf:/etc/nginx/conf.d/default.conf",
+                TESTBED_PATH + "/overview/data/html/:/var/www/html",
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
@@ -536,7 +539,9 @@ def main(argv):
     raTable += '</table>'
     overviewPage += raTable + "</body></html>"
 
-    write_file(overviewPage, TESTBED_PATH + '/nginx/data/' +'overview.html', mkpath=False, overwrite=True)
+    write_file(overviewPage, TESTBED_PATH + '/overview/data/html/' +'overview.html', mkpath=False, overwrite=True)
+    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/overview/data/conf/default.conf') 
+
 
 
 
