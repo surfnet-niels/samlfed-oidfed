@@ -189,7 +189,7 @@ def main(argv):
 
     # The global RP is a member of all feerations, hence has all as TA and authority hint
     for ta in raConf.keys():
-        rpConf["global-rp"]["tas"].append(expandTestbedURL(ta,TESTBED_BASEURL))
+        rpConf["global-rp"]["tas"].append(ta)
 
     #
     # Make sure we have all config dirs
@@ -256,6 +256,17 @@ def main(argv):
                 TESTBED_PATH + "/caddy/Caddyfile:/etc/caddy/Caddyfile",
                 TESTBED_PATH + "/caddy/data:/data",
                 TESTBED_PATH + "/caddy/config:/config"
+            ],
+            "expose": ["8765"],
+            "stop_grace_period": "'500ms'"
+    }
+
+    tb['services']['overview'] = {
+            "image": "'nginx:1-alpine'",
+            "networks": {"caddy": ''},
+            "volumes": [
+                TESTBED_PATH + "/nginx/default.conf:/etc/nginx/conf.d/default.conf",
+                TESTBED_PATH + "/nginx/data:/var/www/html",
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
@@ -499,10 +510,33 @@ def main(argv):
 
     write_file('\n'.join(subs), TESTBED_PATH+'/subordinates.sh', mkpath=False, overwrite=True)
 
+    # Create a simple overview page
+    overviewPage = "<html><title>eduGAIN OIDfed Overview page</title><body>"
+    
+    raTable = '''
+    <table>
+        <tr>
+            <td colspan="3">Trust Anchors</td>
+        </tr>
+        <tr>
+            <td>Name</td>
+            <td>Country</td>
+            <td>Trust Anchor</td>
+        </tr>
+    '''
 
+    for ra in raConf.keys():
+        raTable += '''
+            <tr>
+                <td>'''+raConf[ra]["display_name"]+'''</td>
+                <td>'''+raConf[ra]["country_code"]+'''</td>
+                <td><a href="'''+raConf[ra]["ta_url"]+'''/.well-known/openid-federation">'''+raConf[ra]["ta_url"]+'''</a></td>
+            </tr>
+        '''
+    raTable += '</table>'
+    overviewPage += raTable + "</body></html>"
 
-#    p(subordinates)
-#write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
+    write_file(overviewPage, TESTBED_PATH + '/nginx/data/' +'overview.html', mkpath=False, overwrite=True)
 
 
 
