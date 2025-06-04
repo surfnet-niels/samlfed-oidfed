@@ -102,7 +102,7 @@ def parseFeds(fedsJson,fedsInUse, baseURL):
     RAs = {}
 
     for fedID in fedsJson.keys(): 
-        if fedID in fedsInUse:
+        if fedID in fedsInUse or len(fedsInUse) == 0:
             p(fedID + " included in testbed")
             if fedsJson[fedID]['status'] == "6":
                 if "countries" in fedsJson[fedID]:
@@ -113,7 +113,9 @@ def parseFeds(fedsJson,fedsInUse, baseURL):
                             'reg_auth': fedsJson[fedID]['reg_auth'],
                             'country_code': ''.join(fedsJson[fedID].get('country_code')[i]),
                             'md_url': [fedsJson[fedID]['metadata_url']],
-                            'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.' + baseURL}
+                            'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.' + baseURL,
+                            'subordinates': []
+                        }
 
                         RAs[fedID_country] = thisFedData
             else:
@@ -131,6 +133,7 @@ def main(argv):
     OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
     KEYS_PATH = TESTBED_PATH + '/keys/'
     TESTBED_BASEURL= 'oidf.lab.surf.nl'
+    DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
 
     EDUGAIN_RA_URI = 'https://www.edugain.org'
 
@@ -149,7 +152,8 @@ def main(argv):
         allFeds = loadJSON(INPUT_PATH + 'allfeds.json')
 
     # Read Feds into Config, provide an array of Fed names to filter
-    raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'], TESTBED_BASEURL)
+    #raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'], TESTBED_BASEURL)
+    raConf = parseFeds(allFeds, [], TESTBED_BASEURL)
 
     # Add eduGAIN as a TA
     raConf["edugain"] = {
@@ -158,105 +162,34 @@ def main(argv):
         "reg_auth": '',
         "country_code": '',
         "md_url": '',
-        "ta_url": 'https://edugain.oidf.lab.surf.nl'
+        "ta_url": 'https://edugain.oidf.lab.surf.nl',
+        "subordinates": []
     }
 
     #
-    # Configure Test RPs
+    # Configure TEST RPs
     # Note all other RPs will register lateron
     #
-    rpConfFile = '''{
-        "surf-rp": {
-            "name": "SURF test RP",
-            "url": "surf-rp",
-            "tas": ["nl.surfconext", "edugain"],
-            "tms": [
-                {"https://edugain.org/member": "edugain"},
-                {"https://erasmus-plus.ec.europa.eu": "erasmus-plus"}
-            ]
-        }, 
-        "puhuri-rp": {
-            "name": "Puhuri test RP",
-            "url": "puhuri-rp",
-            "tas": ["fi.haka", "edugain"],
-            "tms": [
-                {"https://edugain.org/member": "edugain"}
-            ]
-        }, 
-        "helsinki-rp": {
-            "name": "Helsinki test RP",
-            "url": "helsinki-rp",
-            "tas": ["fi.haka", "edugain"],
-            "tms": [
-                {"https://edugain.org/member": "edugain"}
-            ]
-        }, 
-        "garr-rp": {
-            "name": "GARR test RP",
-            "url": "garr-rp",
-            "tas": ["it.garr", "edugain"],
-            "tms": [
-                {"https://edugain.org/member": "edugain"}
-            ]
-        }
-    }'''
-    rpConf=json.loads(rpConfFile)
-
+    rpConf=loadJSON("config/rp/config.json")
+        
     # Config for TMIs that are not part of TAs
-    tmiConfFile = '''{
-        "edugain": {
-            "name": "eduGAIN Membership Trustmark Issuer",
-            "url": "edugain",
-            "tas": [],
-            "trust_mark_ids": ["https://edugain.org/member"],
-            "tmi_type": "ta"
-        },
-        "erasmus-plus": {
-            "name": "Erasmus+ Trustmark Issuer",
-            "url": "erasmus-plus",
-            "tas": ["edugain"],
-            "trust_mark_ids": ["https://erasmus-plus.ec.europa.eu"],
-            "tmi_type": "standalone"
-        }
-    }'''
-    tmiConf=json.loads(tmiConfFile)
+    tmiConf=loadJSON("config/tmi/config.json")
 
-    tmConfFile = '''{
-        "https://edugain.org/member": {
-            "name": "eduGAIN Membership",
-            "issuer": "edugain",
-            "logo_uri": "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
-            "ref": "",
-            "lifetime": 86400
-        },
-        "https://erasmus-plus.ec.europa.eu": {
-            "name": "Erasmus+ Trustmark",
-            "issuer": "erasmus-plus",
-            "logo_uri": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Erasmus%2B_Logo.svg/799px-Erasmus%2B_Logo.svg.png",
-            "ref": "https://erasmus-plues.ec.europa.eu/ref",
-            "lifetime": 86400
-        }        
-    }'''
-    tmConf=json.loads(tmConfFile)
+    # Config for TM 
+    tmConf=loadJSON("config/tm/config.json")
 
     # Config for TMOs
-    tmoConfFile = '''{
-        "refeds": {
-            "name": "REFEDs Trustmark Owner",
-            "tas": ["edugain"],
-            "jwks": null,
-            "trust_mark_id": "https://refeds.org/sirtfi",
-            "ref": "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf",
-            "trust_mark_issuers": [
-                "nl.surfconext",
-                "it.idem",
-                "us.incommon",
-                "fi.haka",
-                "se.swamid"
-            ]
-        } 
-    }'''
-    tmoConf=json.loads(tmoConfFile)
+    tmoConf=loadJSON("config/tmo/config.json")
+
+    # Specials
+
+    # eduGAIN has all national feds as its subordinates
+    for ta in raConf.keys():
+        raConf["edugain"]["subordinates"].append(expandTestbedURL(ta,TESTBED_BASEURL))
+
+    # The global RP is a member of all feerations, hence has all as TA and authority hint
+    for ta in raConf.keys():
+        rpConf["global-rp"]["tas"].append(expandTestbedURL(ta,TESTBED_BASEURL))
 
     #
     # Make sure we have all config dirs
@@ -338,8 +271,11 @@ def main(argv):
 
     # END Build docker-compose container definition
 
-
+    ##################################################################################################################################
+    #
     # Build configuration for various containers
+    #
+    ##################################################################################################################################
 
     # Add Trustmark Owners
     # TMOs are not operational infra so do not need to be in the docker compose!
@@ -482,14 +418,15 @@ def main(argv):
 
             # Add eduGAIN as eduGAIN Membership TMI
             os.popen('cp templates/ta_metadata-policy.json '+TESTBED_PATH+'/' +ra+ '/data/metadata-policy.json') 
-        
+
         # Write config to file
         ta.to_yaml(TESTBED_PATH+'/' +ra+ '/data/config.yaml')  # writes the config to file
 
 
     #
-    # Write config from template for all TAs
+    # Write config from template for all Test RPs
     #
+
     for this_rp in rpConf.keys():
         # read the RP config template
         rp = rp_config.from_yaml('templates/rp_config.yaml')
@@ -507,6 +444,7 @@ def main(argv):
 
         # Write config to file
         rp.to_yaml(TESTBED_PATH+'/' +this_rp+ '/data/config.yaml')  # writes the config to file
+    
     #
     # TODO: Write config from template for all TEST OPs
     #
@@ -525,6 +463,50 @@ def main(argv):
         if tmiConf[tmi]["tmi_type"] == "standalone":
             caddyConf.append('\n' + tmi +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+tmi+':8765\n}  ')  
     write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
+
+    # Relations
+
+    # Now write out all relations between the entities so these can be fed to the software
+
+    # Register subordinates
+    subordinates = {}
+    for ta in raConf.keys():
+        if "subordinates" in raConf[ta]:
+            subordinates[ta] = []
+
+            # All TAs have the global RP as a subordinate
+            raConf[ta]["subordinates"].append(expandTestbedURL("global-rp",TESTBED_BASEURL))
+
+            for sub in raConf[ta]["subordinates"]:
+                subordinates[ta].append(sub)
+
+            # All TMIs that have this ta as a TA must be a subordinate of this TA
+            for tmi in tmiConf.keys():
+                if tmiConf[tmi]["tmi_type"] == "standalone" and ta in tmiConf[tmi]["tas"]:
+                    subordinates[ta].append(expandTestbedURL(tmi,TESTBED_BASEURL))
+
+            # Add additional Test RPs
+            for rp in rpConf.keys():
+                if ta in rpConf[rp]["tas"] and ta != "edugain":
+                    subordinates[ta].append(expandTestbedURL(rp,TESTBED_BASEURL))
+
+    write_file(subordinates, TESTBED_PATH+'/subordinates.json', mkpath=False, overwrite=True, type="json")
+
+    subs = ["#! /bin/bash"]
+    for ta in subordinates.keys():
+        for entity in subordinates[ta]:
+            subs.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", ta)+ " /tacli -c /data/config.yaml subordinates add " + entity)
+
+    write_file('\n'.join(subs), TESTBED_PATH+'/subordinates.sh', mkpath=False, overwrite=True)
+
+
+
+#    p(subordinates)
+#write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
+
+
+
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
