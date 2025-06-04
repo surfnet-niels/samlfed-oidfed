@@ -152,13 +152,13 @@ def main(argv):
     raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'])
 
     # Add eduGAIN as a TA
-    raConf['edugain'] = {
-        'display_name': 'eduGAIN',
-        'name':  'edugain',
-        'reg_auth': '',
-        'country_code': '',
-        'md_url': [''],
-        'ta_url': 'https://edugain.oidfed.lab.surf.nl'
+    raConf["edugain"] = {
+        "display_name": 'eduGAIN',
+        "name":  'edugain',
+        "reg_auth": '',
+        "country_code": '',
+        "md_url": '',
+        "ta_url": 'https://edugain.oidfed.lab.surf.nl'
     }
 
     #
@@ -203,7 +203,7 @@ def main(argv):
     rpConf=json.loads(rpConfFile)
 
     # Config for TMIs that are not part of TAs
-    tmiConf = {
+    tmiConfFile = '''{
         "edugain": {
             "name": "eduGAIN Membership Trustmark Issuer",
             "url": "edugain",
@@ -218,9 +218,10 @@ def main(argv):
             "trust_mark_ids": ["https://erasmus-plus.ec.europa.eu"],
             "tmi_type": "standalone"
         }
-    }
+    }'''
+    tmiConf=json.loads(tmiConfFile)
 
-    tmConf = {
+    tmConfFile = '''{
         "https://edugain.org/member": {
             "name": "eduGAIN Membership",
             "issuer": "edugain",
@@ -235,14 +236,15 @@ def main(argv):
             "ref": "https://erasmus-plues.ec.europa.eu/ref",
             "lifetime": 86400
         }        
-    }
+    }'''
+    tmConf=json.loads(tmConfFile)
 
     # Config for TMOs
-    tmoConf = {
+    tmoConfFile = '''{
         "refeds": {
             "name": "REFEDs Trustmark Owner",
             "tas": ["edugain"],
-            "jwks": None,
+            "jwks": null,
             "trust_mark_id": "https://refeds.org/sirtfi",
             "ref": "https://refeds.org/wp-content/uploads/2022/08/Sirtfi-v2.pdf",
             "trust_mark_issuers": [
@@ -252,9 +254,10 @@ def main(argv):
                 "fi.haka",
                 "se.swamid"
             ]
-        }, 
+        } 
+    }'''
+    tmoConf=json.loads(tmoConfFile)
 
-    }
     #
     # Make sure we have all config dirs
     # TODO: make function for this
@@ -475,9 +478,7 @@ def main(argv):
         # Write config to file
         ta.to_yaml(TESTBED_PATH+'/' +ra+ '/data/config.yaml')  # writes the config to file
 
-    #
-    # TODO: Write config from template for all TEST RPs
-    #
+
     #
     # Write config from template for all TAs
     #
@@ -510,6 +511,11 @@ def main(argv):
 
     for ra in raConf.keys():
         caddyConf.append('\n' + ra +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+ra+':8765\n}  ')
+    for rp in rpConf.keys():
+        caddyConf.append('\n' + rp +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+rp+':8765\n}  ')   
+    for tmi in tmiConf.keys():
+        if tmiConf[this_tmi]["tmi_type"] == "standalone":
+            caddyConf.append('\n' + tmi +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+tmi+':8765\n}  ')  
     write_file('\n'.join(caddyConf), TESTBED_PATH+'/caddy/Caddyfile', mkpath=False, overwrite=True)
 
 if __name__ == "__main__":
