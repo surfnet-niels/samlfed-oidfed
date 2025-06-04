@@ -1,4 +1,4 @@
-server_addr: 8765
+server_addr: :8765
 entity_id: 
 authority_hints: []
 trust_anchors: []
