@@ -195,8 +195,8 @@ def main(argv):
     # Make sure we have all config dirs
     # TODO: make function for this
     os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
-    os.makedirs(TESTBED_PATH+'/overview/conf', mode=0o777, exist_ok=True)
-    os.makedirs(TESTBED_PATH+'/overview/data/html', mode=0o777, exist_ok=True)
+    os.makedirs(TESTBED_PATH+'/testbed/conf', mode=0o777, exist_ok=True)
+    os.makedirs(TESTBED_PATH+'/testbed/data/html', mode=0o777, exist_ok=True)
 
     for ra in raConf.keys():
         os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
@@ -264,12 +264,12 @@ def main(argv):
             "stop_grace_period": "'500ms'"
     }
 
-    tb['services']['overview'] = {
+    tb['services']['testbed'] = {
             "image": "'nginx:1-alpine'",
             "networks": {"caddy": ''},
             "volumes": [
-                TESTBED_PATH + "/overview/conf/default.conf:/etc/nginx/conf.d/default.conf",
-                TESTBED_PATH + "/overview/data/html/:/var/www/html",
+                TESTBED_PATH + "/testbed/conf/default.conf:/etc/nginx/conf.d/default.conf",
+                TESTBED_PATH + "/testbed/data/html/:/var/www/html",
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
@@ -468,8 +468,8 @@ def main(argv):
     #
     caddyConf = []
     caddyConf.append('{\n     email niels.vandijk@surf.nl\n}\n')
-    # Add overview page
-    caddyConf.append('\noverview.'+ TESTBED_BASEURL + ' {\n     reverse_proxy overview:8765\n}  ')
+    # Add testbed page
+    caddyConf.append('\ntestbed.'+ TESTBED_BASEURL + ' {\n     reverse_proxy testbed:8765\n}  ')
 
     for ra in raConf.keys():
         caddyConf.append('\n' + ra +'.'+ TESTBED_BASEURL + ' {\n     reverse_proxy '+ra+':8765\n}  ')
@@ -515,8 +515,8 @@ def main(argv):
 
     write_file('\n'.join(subs), TESTBED_PATH+'/subordinates.sh', mkpath=False, overwrite=True)
 
-    # Create a simple overview page
-    overviewPage = "<html><title>eduGAIN OIDfed Overview page</title><body>"
+    # Create a simple testbed page
+    testbedPage = "<html><title>eduGAIN OIDfed testbed page</title><body>"
     
     raTable = '''
     <table>
@@ -539,10 +539,10 @@ def main(argv):
             </tr>
         '''
     raTable += '</table>'
-    overviewPage += raTable + "</body></html>"
+    testbedPage += raTable + "</body></html>"
 
-    write_file(overviewPage, TESTBED_PATH + '/overview/data/html/' +'index.html', mkpath=False, overwrite=True)
-    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/overview/conf/default.conf') 
+    write_file(testbedPage, TESTBED_PATH + '/testbed/data/html/' +'index.html', mkpath=False, overwrite=True)
+    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/testbed/conf/default.conf') 
 
 
 
