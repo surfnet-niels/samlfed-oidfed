@@ -541,8 +541,8 @@ def main(argv):
     raTable += '</table>'
     overviewPage += raTable + "</body></html>"
 
-    write_file(overviewPage, TESTBED_PATH + '/overview/data/html/' +'overview.html', mkpath=False, overwrite=True)
-    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/overview/data/conf/default.conf') 
+    write_file(overviewPage, TESTBED_PATH + '/overview/data/html/' +'index.html', mkpath=False, overwrite=True)
+    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/overview/conf/default.conf') 
 
 
 
