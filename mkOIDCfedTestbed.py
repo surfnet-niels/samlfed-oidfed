@@ -195,7 +195,7 @@ def main(argv):
     # Make sure we have all config dirs
     # TODO: make function for this
     os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
-    os.makedirs(TESTBED_PATH+'/overview/data/conf', mode=0o777, exist_ok=True)
+    os.makedirs(TESTBED_PATH+'/overview/conf', mode=0o777, exist_ok=True)
     os.makedirs(TESTBED_PATH+'/overview/data/html', mode=0o777, exist_ok=True)
 
     for ra in raConf.keys():
