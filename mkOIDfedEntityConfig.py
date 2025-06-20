@@ -1030,13 +1030,15 @@ def main(argv):
    CONFIG_PATH = ROOTPATH + '/config/'
    INPUT_PATH = ROOTPATH + '/feeds/'
    OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
+   TESTBED_PATH = ROOTPATH + '/testbed'
+   OUTPUT_PATH = TESTBED_PATH + '/leafs/data/html/'
    KEYS_PATH = ROOTPATH + '/keys/'
 
    EDUGAIN_RA_URI = 'https://www.edugain.org'
    entityList = {}
    inputfile = None
    inputpath = INPUT_PATH
-   outputpath = OUTPUT_PATH
+   #outputpath = OUTPUT_PATH
 
    ENROLLLEAFS = False
 
@@ -1065,10 +1067,10 @@ def main(argv):
 
    # For each RA process the entities
    for ra in RAs.keys():
-      ParseRA = True
+      ParseRA = False
       p("\nProcessing: " + RAs[ra]["ra_name"])
-      #if RAs[ra]["ra_name"] == 'it.idem':
-      #cd de      ParseRA = True
+      if RAs[ra]["ra_name"] == 'it.idem':
+         ParseRA = True
 
       if ParseRA:
          # Load entity data from federation endpoint(s) and retunn me the file locations
@@ -1077,7 +1079,7 @@ def main(argv):
          # Now loop over RAs files to extract entity metadata and work that into a json containing a 'base' entity properties as lifted from SAML 
          # And a 'metadata' structure containing the OIDCfed metadata 
          try:
-            parseLeaf(ra, RAs, entityList, RAs[ra]["filepath"][0], outputpath, namespaces, "json", baseURL)
+            parseLeaf(ra, RAs, entityList, RAs[ra]["filepath"][0], OUTPUT_PATH, namespaces, "json", baseURL)
          except:
             p("Could not parse leaf") 
             pj(RAs[ra])
@@ -1092,13 +1094,13 @@ def main(argv):
       leafMeta = entityList[leafID]['metadata']
 
       #Export and Write private key
-      writeFile(exportKey(leafKeys, "private"), leafID, outputpath, "jwk")
-      writeFile(leafMeta, leafID, outputpath, "json")
+      writeFile(exportKey(leafKeys, "private"), leafID, OUTPUT_PATH, "jwk")
+      writeFile(leafMeta, leafID, OUTPUT_PATH, "json")
 
       #Generate and Write jwt signed metadata
       signedLeafMetadata = mkSignedOIDCfedMetadata(leafMeta, leafKeys)
-      #p(signedLeafMetadata)
-      writeFile(signedLeafMetadata, leafID, outputpath, "jwt")
+      p(signedLeafMetadata)
+      writeFile(signedLeafMetadata, leafID, OUTPUT_PATH, "jwt")
 
       # Enroll the entities in the federation by registering them into the TAs
       if ENROLLLEAFS:

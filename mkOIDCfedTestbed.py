@@ -126,6 +126,7 @@ def main(argv):
     LOGDEBUG = True
     WRITETOLOG = False
 
+    # ToDo: move all of this to a conf file
     ROOTPATH=os.getcwd()
     TESTBED_PATH = ROOTPATH + '/testbed'
     CONFIG_PATH = TESTBED_PATH + '/config/'
@@ -134,6 +135,7 @@ def main(argv):
     KEYS_PATH = TESTBED_PATH + '/keys/'
     TESTBED_BASEURL= 'oidf.lab.surf.nl'
     DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
+    EMAIL = "niels.vandijk@surf.nl"
 
     EDUGAIN_RA_URI = 'https://www.edugain.org'
 
@@ -151,11 +153,12 @@ def main(argv):
     else:
         allFeds = loadJSON(INPUT_PATH + 'allfeds.json')
 
-    # Read Feds into Config, provide an array of Fed names to filter
+    # Read Feds into Config, Optionally provide an array of Fed names to include
     #raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'], TESTBED_BASEURL)
     raConf = parseFeds(allFeds, [], TESTBED_BASEURL)
 
     # Add eduGAIN as a TA
+    # ToDo: move to config
     raConf["edugain"] = {
         "display_name": 'eduGAIN',
         "name":  'edugain',
@@ -187,16 +190,22 @@ def main(argv):
     for ta in raConf.keys():
         raConf["edugain"]["subordinates"].append(expandTestbedURL(ta,TESTBED_BASEURL))
 
-    # The global RP is a member of all feerations, hence has all as TA and authority hint
+    # The global RP is a member of all federations, hence has all as TA and authority hint
     for ta in raConf.keys():
         rpConf["global-rp"]["tas"].append(ta)
 
     #
     # Make sure we have all config dirs
     # TODO: make function for this
+    # Caddy proxy 
     os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
+    # A static server for a testbed overview page
     os.makedirs(TESTBED_PATH+'/testbed/conf', mode=0o777, exist_ok=True)
     os.makedirs(TESTBED_PATH+'/testbed/data/html', mode=0o777, exist_ok=True)
+    # A static server for LEAFS
+    os.makedirs(TESTBED_PATH+'/leafs/conf', mode=0o777, exist_ok=True)
+    os.makedirs(TESTBED_PATH+'/leafs/data/html', mode=0o777, exist_ok=True)
+
 
     for ra in raConf.keys():
         os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
@@ -270,6 +279,17 @@ def main(argv):
             "volumes": [
                 TESTBED_PATH + "/testbed/conf/default.conf:/etc/nginx/conf.d/default.conf",
                 TESTBED_PATH + "/testbed/data/html/:/var/www/html",
+            ],
+            "expose": ["8765"],
+            "stop_grace_period": "'500ms'"
+    }
+
+    tb['services']['leafs'] = {
+            "image": "'nginx:1-alpine'",
+            "networks": {"caddy": ''},
+            "volumes": [
+                TESTBED_PATH + "/leafs/conf/default.conf:/etc/nginx/conf.d/default.conf",
+                TESTBED_PATH + "/leafs/data/html/:/var/www/html",
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
@@ -467,7 +487,7 @@ def main(argv):
     # Build caddy configuration file to proxy all containers
     #
     caddyConf = []
-    caddyConf.append('{\n     email niels.vandijk@surf.nl\n}\n')
+    caddyConf.append('{\n     email '+EMAIL+'\n}\n')
     # Add testbed page
     caddyConf.append('\ntestbed.'+ TESTBED_BASEURL + ' {\n     reverse_proxy testbed:8765\n}  ')
 
@@ -508,6 +528,7 @@ def main(argv):
 
     write_file(subordinates, TESTBED_PATH+'/subordinates.json', mkpath=False, overwrite=True, type="json")
 
+    # Create executable to inject subordinates into reevant containers
     subs = ["#! /bin/bash"]
     for ta in subordinates.keys():
         for entity in subordinates[ta]:
@@ -515,7 +536,7 @@ def main(argv):
 
     write_file('\n'.join(subs), TESTBED_PATH+'/subordinates.sh', mkpath=False, overwrite=True)
 
-    # Create a simple testbed page
+    # Create a simple testbed overview page
     testbedPage = "<html><title>eduGAIN OIDfed testbed page</title><body>"
     
     raTable = '''
