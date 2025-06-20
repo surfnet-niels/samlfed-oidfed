@@ -1054,7 +1054,7 @@ def main(argv):
    }
 
    #OIDCfed params
-   baseURL = "https:///leafs.oidf.dev.eduwallet.nl/"
+   baseURL = "https:///leafs.oidf.lab.surf.nl/"
    metadataURLpath = ".well-known/openid-federation/"
    
    # First load RA config

@@ -196,7 +196,7 @@ def main(argv):
 
     #
     # Make sure we have all config dirs
-    # TODO: make function for this
+    # TODO: make function for this?
     # Caddy proxy 
     os.makedirs(TESTBED_PATH+'/caddy', mode=0o777, exist_ok=True)
     # A static server for a testbed overview page
@@ -206,6 +206,9 @@ def main(argv):
     os.makedirs(TESTBED_PATH+'/leafs/conf', mode=0o777, exist_ok=True)
     os.makedirs(TESTBED_PATH+'/leafs/data/html', mode=0o777, exist_ok=True)
 
+    # Create nginx config for static containers
+    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/leafs/conf/default.conf')
+    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/testbed/conf/default.conf')
 
     for ra in raConf.keys():
         os.makedirs(TESTBED_PATH+'/' +ra+ '/data', mode=0o777, exist_ok=True)
@@ -563,12 +566,7 @@ def main(argv):
     testbedPage += raTable + "</body></html>"
 
     write_file(testbedPage, TESTBED_PATH + '/testbed/data/html/' +'index.html', mkpath=False, overwrite=True)
-    os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/testbed/conf/default.conf') 
-
-
-
-
-
+    #os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/testbed/conf/default.conf') 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
