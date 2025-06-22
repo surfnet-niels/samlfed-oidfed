@@ -680,6 +680,14 @@ def writeFile(contents, fileid, outputpath, filetype='json', mkParents=True, ove
          Path(fedMetaPath).mkdir(parents=mkParents, exist_ok=overwrite)
          contentFile = open(fedMetaPath+"openid-federation", "w",encoding=None)
          contentFile.write(str(contents))  
+      case _:
+         # info txt path
+         # Write a simple txt with the name anentityID of the institution for comparison
+         leafsPath = outputpath + "leafs/" + fileid + "/"
+         # Write the txt to the leaf url
+         Path(leafsPath).mkdir(parents=mkParents, exist_ok=overwrite)
+         contentFile = open(leafsPath+".txt", "w",encoding=None)
+         contentFile.write(contents)
       
    contentFile.close()
 
@@ -1092,10 +1100,13 @@ def main(argv):
    for leafID in entityList:
       leafKeys = entityList[leafID]['base']['keys']
       leafMeta = entityList[leafID]['metadata']
+      leafName = entityList[leafID]['ra_name']
 
       #Export and Write private key
       writeFile(exportKey(leafKeys, "private"), leafID, OUTPUT_PATH, "jwk")
       writeFile(leafMeta, leafID, OUTPUT_PATH, "json")
+      writeFile(leafName, leafID, OUTPUT_PATH, "txt")
+
 
       #Generate and Write jwt signed metadata
       signedLeafMetadata = mkSignedOIDCfedMetadata(leafMeta, leafKeys)
