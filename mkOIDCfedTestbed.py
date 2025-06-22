@@ -491,7 +491,9 @@ def main(argv):
     #
     caddyConf = []
     caddyConf.append('{\n     email '+EMAIL+'\n}\n')
-    # Add testbed page
+    # Add testbed static nginx
+    caddyConf.append('\ntestbed.'+ TESTBED_BASEURL + ' {\n     reverse_proxy testbed:8765\n}  ')
+    # Add leafs static nginx
     caddyConf.append('\ntestbed.'+ TESTBED_BASEURL + ' {\n     reverse_proxy testbed:8765\n}  ')
 
     for ra in raConf.keys():
