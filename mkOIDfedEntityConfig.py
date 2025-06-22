@@ -683,7 +683,6 @@ def writeFile(contents, fileid, outputpath, filetype='json', mkParents=True, ove
          contentFile = open(fedMetaPath+"openid-federation", "w",encoding=None)
          contentFile.write(str(contents))  
       case 'txt':
-         p("writing txt")
          # info txt path
          # Write a simple txt with the name anentityID of the institution for comparison
          leafsPath = outputpath + "leafs/" + fileid + "/"
@@ -1110,10 +1109,8 @@ def main(argv):
       writeFile(leafMeta, leafID, OUTPUT_PATH, "json")
       writeFile(leafEntityID , leafID, OUTPUT_PATH, "txt")
 
-
       #Generate and Write jwt signed metadata
       signedLeafMetadata = mkSignedOIDCfedMetadata(leafMeta, leafKeys)
-      p(signedLeafMetadata)
       writeFile(signedLeafMetadata, leafID, OUTPUT_PATH, "jwt")
 
       # Enroll the entities in the federation by registering them into the TAs
