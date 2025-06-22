@@ -667,7 +667,7 @@ def writeFile(contents, fileid, outputpath, filetype='json', mkParents=True, ove
 
          # Write the json to the leaf url
          Path(leafsPath).mkdir(parents=mkParents, exist_ok=overwrite)
-         contentFile = open(leafsPath+".json", "w",encoding=None)
+         contentFile = open(leafsPath+"entity.json", "w",encoding=None)
          contentFile.write(json.dumps(contents,sort_keys=False, indent=4, ensure_ascii=False,separators=(',', ':')))
       case 'jwk':
          keysPath = outputpath + "keys/"
