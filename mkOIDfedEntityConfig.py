@@ -570,7 +570,8 @@ def uploadMetadata(taUrl, sub, type="rp"):
    taUrl = taUrl + "/enroll"
 
    p(sub)
-   #p("curl -i -X POST -H 'Content-Type: application/json' -d '"+str(message)+"' "+taUrl)
+   p(taUrl)
+   p("curl -i -X POST -H 'Content-Type: application/json' -d '"+str(message)+"' "+taUrl)
 
    #headers = {'Content-Type: application/json'}
    #res = urllib.request.post(taUrl, data=metadata, headers=headers)
@@ -578,6 +579,7 @@ def uploadMetadata(taUrl, sub, type="rp"):
    req = urllib.request.Request(taUrl, message)
    resp = urllib.request.urlopen(req).read().decode('utf-8')
    print(resp)
+   sys.exit()
 
 ##################################################################################################################################
 #
