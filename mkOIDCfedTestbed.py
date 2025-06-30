@@ -79,7 +79,7 @@ def fetchFile(url, file_path, overwrite=True):
     urllib.request.urlretrieve(url, file_path)
     return True
   except:
-    p("ERROR: Could not download URL: " + url, LOGDEBUG)
+    p("ERROR: Could not download URL: " + url)
     return False
 
 def expandTestbedURLs(feds, testbed_url):

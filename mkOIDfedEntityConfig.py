@@ -640,131 +640,20 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
    ra_name = raList[ra]["ra_name"]
    ta_url = raList[ra]["ta_url"]
 
-   thisEntityID = None  # Do not look at a specific entity
-   #thisEntityID = "https://shib.unibo.it/idp/shibboleth"
-   thisEntityID = "https://aai-login.kalaidos-fh.ch/idp/shibboleth"
-
    for EntityDescriptor in idp:
          info = ""
          privacy = ""
-         parseEntity = False
 
          # Get entityID
          entityID = getEntityID(EntityDescriptor,namespaces)
 
-         if thisEntityID is not None:
-            if entityID == thisEntityID:
-               parseEntity = True
-
-         if parseEntity:
-            p("INFO: Working on: " + entityID, True)
-            # Start processing SAML metadata for this entity and put that in a dict
-
-            # Entity Categories live above IdP or SP descriptor, but ewe want to search on a per EntityID basis
-            EntityCategories= root.findall(".//*[@entityID='"+entityID+"']//saml:AttributeValue", namespaces)
-            ECs = getEntityCategories(EntityCategories)
-
-            # Get hashed entityID
-            cont_id = hashSHA1(entityID)
-
-            # If an entity is already in the list of entties we do not need to process the metadata and we only need to append the TA
-            if cont_id in entityList: 
-               # Update TA
-               updateOIDCfedMetadata(entityList[cont_id], 'authority_hints',  ta_url)
-            else:
-
-               #Get Shib MD Scope
-               shibscope = getElement(EntityDescriptor,namespaces, 'shibscope','idp')
-               
-               # Get InformationURL
-               info = getElement(EntityDescriptor,namespaces, 'informationurl','idp')
-
-               # Get PrivacyStatementURL
-               privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','idp')
-
-               # Get ServiceName
-               serviceName = getElement(EntityDescriptor,namespaces, 'displayname','idp')
-
-               # Get Description
-               description = getElement(EntityDescriptor,namespaces, 'description','idp')
-
-               # Get Requested Attributes
-               requestedAttributes = getRequestedAttribute(EntityDescriptor,namespaces)
-
-               # Get Organization
-               orgName = getElement(EntityDescriptor,namespaces, 'organizationname','idp')
-               orgURL = getElement(EntityDescriptor,namespaces, 'organizationurl','idp')
-               
-               # Get Contacts
-               techContacts = getContacts(EntityDescriptor, namespaces, 'technical', 'json')
-               suppContacts = getContacts(EntityDescriptor, namespaces, 'support', 'json')
-               adminContacts = getContacts(EntityDescriptor, namespaces, 'administrative', 'json')
-               securityContacts = getContacts(EntityDescriptor, namespaces, 'other', 'json')
-               contacts = OrderedDict([
-                  ('technical', techContacts),
-                  ('support', suppContacts),
-                  ('administrative', adminContacts),
-                  ('security', securityContacts),
-               ])
-
-               logo = getElement(EntityDescriptor,namespaces, 'logo','idp')
-
-               # End of processing SAML metadata for this entity 
-               # Now transform that to OIDCfed metadata
-
-               # Generate key material
-               keys=mkJWK(cont_id)
-
-               # Build LEAF JSON Dictionary
-               # Take care: this dict holds the leaf private key!
-               leaf = OrderedDict([
-               ('id',cont_id),
-               ('type', 'op'),
-               ('ra',ra_hash),
-               ('raName',ra_name),
-               ('taURL',ta_url),
-               ('resourceName',serviceName),
-               ('description', description),
-               ('resourceAttributes',requestedAttributes),
-               ('entityID',entityID),
-               ('resourceContacts',contacts), # Formatting not correct?
-               ('info', info),
-               ('orgName', orgName),
-               ('orgURL', orgURL),
-               ('logo', logo),
-               ('privacy', privacy),
-               ('entityCategories', ECs),
-               ('keys', keys),
-               ('contacts', contacts),
-               ('shibscope', shibscope)
-               ])     
-
-               #Generate and Write json formatted metadata
-               leafMetadata = mkOIDCfedMetadata(leaf,baseURL) 
-      
-               # Add leaf to entityList
-               #if cont_id not in entityList: This should not happen...
-               entityList[cont_id]=OrderedDict([
-                  ('base', leaf),
-                  ('metadata', leafMetadata)
-               ]) 
-
-               p("INFO: Processing "+entityID+" completed",True)
-
-   for EntityDescriptor in sp:
-      info = ""
-      privacy = ""
-      
-      # Get entityID
-      entityID = getEntityID(EntityDescriptor,namespaces)
-            
-      if entityID == thisEntityID:
+         p("INFO: Working on: " + entityID, True)
          # Start processing SAML metadata for this entity and put that in a dict
 
-         # Entity Categories live above IdP or SP descriptor, but we want to search on a per EntityID basis
+         # Entity Categories live above IdP or SP descriptor, but ewe want to search on a per EntityID basis
          EntityCategories= root.findall(".//*[@entityID='"+entityID+"']//saml:AttributeValue", namespaces)
          ECs = getEntityCategories(EntityCategories)
-         
+
          # Get hashed entityID
          cont_id = hashSHA1(entityID)
 
@@ -774,26 +663,28 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             updateOIDCfedMetadata(entityList[cont_id], 'authority_hints',  ta_url)
          else:
 
+            #Get Shib MD Scope
+            shibscope = getElement(EntityDescriptor,namespaces, 'shibscope','idp')
+            
             # Get InformationURL
-            info = getElement(EntityDescriptor,namespaces, 'informationurl','sp')
+            info = getElement(EntityDescriptor,namespaces, 'informationurl','idp')
 
             # Get PrivacyStatementURL
-            privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','sp')
+            privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','idp')
 
             # Get ServiceName
-            serviceName = getElement(EntityDescriptor,namespaces, 'servicename','sp')
+            serviceName = getElement(EntityDescriptor,namespaces, 'displayname','idp')
 
             # Get Description
-            description = getElement(EntityDescriptor,namespaces, 'description','sp')
+            description = getElement(EntityDescriptor,namespaces, 'description','idp')
 
             # Get Requested Attributes
             requestedAttributes = getRequestedAttribute(EntityDescriptor,namespaces)
 
             # Get Organization
-            orgName = getElement(EntityDescriptor,namespaces, 'organizationname','sp')
-
-            orgURL = getElement(EntityDescriptor,namespaces, 'organizationurl','sp')
-
+            orgName = getElement(EntityDescriptor,namespaces, 'organizationname','idp')
+            orgURL = getElement(EntityDescriptor,namespaces, 'organizationurl','idp')
+            
             # Get Contacts
             techContacts = getContacts(EntityDescriptor, namespaces, 'technical', 'json')
             suppContacts = getContacts(EntityDescriptor, namespaces, 'support', 'json')
@@ -806,8 +697,8 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                ('security', securityContacts),
             ])
 
-            logo = getElement(EntityDescriptor,namespaces, 'logo','sp')
-            
+            logo = getElement(EntityDescriptor,namespaces, 'logo','idp')
+
             # End of processing SAML metadata for this entity 
             # Now transform that to OIDCfed metadata
 
@@ -818,7 +709,7 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             # Take care: this dict holds the leaf private key!
             leaf = OrderedDict([
             ('id',cont_id),
-            ('type', 'rp'),
+            ('type', 'op'),
             ('ra',ra_hash),
             ('raName',ra_name),
             ('taURL',ta_url),
@@ -828,10 +719,14 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             ('entityID',entityID),
             ('resourceContacts',contacts), # Formatting not correct?
             ('info', info),
+            ('orgName', orgName),
+            ('orgURL', orgURL),
             ('logo', logo),
             ('privacy', privacy),
             ('entityCategories', ECs),
-            ('keys', keys)
+            ('keys', keys),
+            ('contacts', contacts),
+            ('shibscope', shibscope)
             ])     
 
             #Generate and Write json formatted metadata
@@ -843,6 +738,101 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                ('base', leaf),
                ('metadata', leafMetadata)
             ]) 
+
+            p("INFO: Processing "+entityID+" completed",True)
+
+   for EntityDescriptor in sp:
+      info = ""
+      privacy = ""
+      
+      # Get entityID
+      entityID = getEntityID(EntityDescriptor,namespaces)
+         
+
+      # Start processing SAML metadata for this entity and put that in a dict
+
+      # Entity Categories live above IdP or SP descriptor, but we want to search on a per EntityID basis
+      EntityCategories= root.findall(".//*[@entityID='"+entityID+"']//saml:AttributeValue", namespaces)
+      ECs = getEntityCategories(EntityCategories)
+      
+      # Get hashed entityID
+      cont_id = hashSHA1(entityID)
+
+      # If an entity is already in the list of entties we do not need to process the metadata and we only need to append the TA
+      if cont_id in entityList: 
+         # Update TA
+         updateOIDCfedMetadata(entityList[cont_id], 'authority_hints',  ta_url)
+      else:
+
+         # Get InformationURL
+         info = getElement(EntityDescriptor,namespaces, 'informationurl','sp')
+
+         # Get PrivacyStatementURL
+         privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','sp')
+
+         # Get ServiceName
+         serviceName = getElement(EntityDescriptor,namespaces, 'servicename','sp')
+
+         # Get Description
+         description = getElement(EntityDescriptor,namespaces, 'description','sp')
+
+         # Get Requested Attributes
+         requestedAttributes = getRequestedAttribute(EntityDescriptor,namespaces)
+
+         # Get Organization
+         orgName = getElement(EntityDescriptor,namespaces, 'organizationname','sp')
+
+         orgURL = getElement(EntityDescriptor,namespaces, 'organizationurl','sp')
+
+         # Get Contacts
+         techContacts = getContacts(EntityDescriptor, namespaces, 'technical', 'json')
+         suppContacts = getContacts(EntityDescriptor, namespaces, 'support', 'json')
+         adminContacts = getContacts(EntityDescriptor, namespaces, 'administrative', 'json')
+         securityContacts = getContacts(EntityDescriptor, namespaces, 'other', 'json')
+         contacts = OrderedDict([
+            ('technical', techContacts),
+            ('support', suppContacts),
+            ('administrative', adminContacts),
+            ('security', securityContacts),
+         ])
+
+         logo = getElement(EntityDescriptor,namespaces, 'logo','sp')
+         
+         # End of processing SAML metadata for this entity 
+         # Now transform that to OIDCfed metadata
+
+         # Generate key material
+         keys=mkJWK(cont_id)
+
+         # Build LEAF JSON Dictionary
+         # Take care: this dict holds the leaf private key!
+         leaf = OrderedDict([
+         ('id',cont_id),
+         ('type', 'rp'),
+         ('ra',ra_hash),
+         ('raName',ra_name),
+         ('taURL',ta_url),
+         ('resourceName',serviceName),
+         ('description', description),
+         ('resourceAttributes',requestedAttributes),
+         ('entityID',entityID),
+         ('resourceContacts',contacts), # Formatting not correct?
+         ('info', info),
+         ('logo', logo),
+         ('privacy', privacy),
+         ('entityCategories', ECs),
+         ('keys', keys)
+         ])     
+
+         #Generate and Write json formatted metadata
+         leafMetadata = mkOIDCfedMetadata(leaf,baseURL) 
+
+         # Add leaf to entityList
+         #if cont_id not in entityList: This should not happen...
+         entityList[cont_id]=OrderedDict([
+            ('base', leaf),
+            ('metadata', leafMetadata)
+         ]) 
 
 def main(argv):
 
