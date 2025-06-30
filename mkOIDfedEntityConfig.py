@@ -919,7 +919,7 @@ def main(argv):
       #Export and Write private key
       writeFile(exportKey(leafKeys, "private"), leafID, OUTPUT_PATH, "jwk")
       writeFile(leafMeta, leafID, OUTPUT_PATH, "json")
-      htmlContent = "<p>" + leafEntityID + "<br>OIDFed Entity Configuration:<ul>" + "<li><a href='"+ entityList[leafID]['metadata']['sub'] + "/.well-known/openid-federation'>JWT</a></li>" + "<li>OIDF Entity COnfiguration (JSON): <a href='"+ entityList[leafID]['metadata']['sub'] + "/entity.json'>JSON</a></li>" + "</ul></p>"
+      htmlContent = "<h3>" + leafEntityID + "</h3><p>OIDFed Entity Configuration:<ul>" + "<li><a href='"+ entityList[leafID]['metadata']['sub'] + "/.well-known/openid-federation'>JWT</a> (Will be downloaded)</li>" + "<li><a href='"+ entityList[leafID]['metadata']['sub'] + "/entity.json' target='_blank'>JSON</a> (Opens in new window)</li>" + "</ul></p>"
       writeFile(htmlContent, leafID, OUTPUT_PATH, "html")
 
       #Generate and Write jwt signed metadata
