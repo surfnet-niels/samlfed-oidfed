@@ -293,6 +293,7 @@ def main(argv):
             "volumes": [
                 TESTBED_PATH + "/leafs/conf/default.conf:/etc/nginx/conf.d/default.conf",
                 TESTBED_PATH + "/leafs/data/html/:/var/www/html",
+                "/etc/letsencrypt/live/oidf.lab.surf.nl/:/etc/ssl/testbed"
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
