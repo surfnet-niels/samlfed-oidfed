@@ -35,12 +35,15 @@ def p(message, writetolog=WRITETOLOG):
       print(message)
     
 def pj(the_json, writetolog=WRITETOLOG):
-    p(json.dumps(the_json, indent=4, sort_keys=False), writetolog)
+   if writetolog:
+      write_log(json.dumps(the_json, indent=4, sort_keys=False), writetolog)       
+   else:    
+      p(json.dumps(the_json, indent=4, sort_keys=False), writetolog)
 
 def write_log(message):
    datestamp = (datetime.datetime.now()).strftime("%Y-%m-%d")
    timestamp = (datetime.datetime.now()).strftime("%Y-%m-%d %X")
-   f = open("./logs/" + datestamp + "_apistatus.log", "a")
+   f = open("./logs/" + datestamp + "_status.log", "a")
    f.write(timestamp +" "+ message+"\n")
    f.close()
 
@@ -70,8 +73,9 @@ def fetchFile(url, file_path):
   try:
     urllib.request.urlretrieve(url, file_path)
     return True
-  except:
-    p("ERROR: Could not download URL: " + url, LOGDEBUG)
+  except Exception as error:
+    p("ERROR: Could not download from URL: " + url, LOGDEBUG)
+    p("ERROR: Encountered " + type(error).__name__, LOGDEBUG)
     return False
 
 def parseMetadataXML(file_path):
@@ -86,31 +90,30 @@ def parseMetadataXML(file_path):
 
 def fetchMetadata(md_urls, raname, input_path):
 
-    metadataSet = []
+   metadataSet = []
 
-    for i in range(len(md_urls)):
-       md_url = md_urls[i]
-      
-       file_path = input_path + raname.replace(" ", "_") + '_' + str(i) + '.xml'
-    
-       if os.path.isfile(file_path) and not (is_file_older_than_x_days(file_path, 1)):
-           p("INFO: " + raname + " metadata still up to date, skipping download", LOGDEBUG)
-       else:
-           p("INFO: " + raname + " metadata out of date, downloading from " + md_url, LOGDEBUG)
+   for i in range(len(md_urls)):
+      md_url = md_urls[i]
 
-           if (fetchFile(md_url, file_path)):
-             p("INFO: Downloaded metadata: " + md_url + " to file location: " + file_path, LOGDEBUG)
-           else:
-             p("ERROR: Could not download metadata: " + md_url, LOGDEBUG)
-             return {} 
-             
-       metadataSet.append(file_path)
+      file_path = input_path + raname.replace(" ", "_") + '_' + str(i) + '.xml'
+
+      if os.path.isfile(file_path) and not (is_file_older_than_x_days(file_path, 1)):
+         p("INFO: " + raname + " metadata still up to date, skipping download", LOGDEBUG)
+      else:
+         p("INFO: " + raname + " metadata out of date, downloading from " + md_url, LOGDEBUG)
+
+         if (fetchFile(md_url, file_path)):
+            p("INFO: Downloaded metadata: " + md_url + " to file location: " + file_path, LOGDEBUG)
+         else:
+            p("ERROR: Could not download metadata for " + raname, LOGDEBUG)
+            file_path = None
+            
+      metadataSet.append(file_path)
        
-       
-    if len(md_urls) == 0:
-      p("ERROR: No metadata URL provided for RA " + raname, LOGDEBUG)
+      if len(md_urls) == 0:
+         p("ERROR: No metadata URL provided for RA " + raname, LOGDEBUG)
 
-    return metadataSet
+   return metadataSet
  
 def getFeds(ulr, input_path):
   json_file = input_path + 'allfeds.json'
@@ -160,6 +163,12 @@ def setRAdata(raconf, input_path, edugain_ra_uri):
 #
 ##################################################################################################################################
 
+def getDescriptor(type):
+   if (type.lower() == 'idp'):
+      return "./md:IDPSSODescriptor"
+   if (type.lower() == 'sp'):
+      return "./md:SPSSODescriptor"
+
 # Get entityID
 def getEntityID(EntityDescriptor, namespaces):
     return EntityDescriptor.get('entityID')
@@ -168,26 +177,38 @@ def getEntityID(EntityDescriptor, namespaces):
 def hashSHA1(aString):    
     return hashlib.sha1(aString.encode('utf-8')).hexdigest()
 
-# Get MDUI Descriptions
-def getDescriptions(EntityDescriptor,namespaces,entType='idp',lang='en'):
+#Get XML element
+def getElement(EntityDescriptor,namespaces, elementName, entityType,lang='en'):
+   match elementName:
+      case 'description':
+         xPathString = getDescriptor(entityType) + "/md:Extensions/mdui:UIInfo/mdui:Description"
+      case 'servicename':
+         xPathString = getDescriptor(entityType) + "/md:AttributeConsumingService/md:ServiceName"
+      case 'displayname':
+         xPathString = getDescriptor(entityType) + "/md:Extensions/mdui:UIInfo/mdui:DisplayName"
+      case 'informationurl':
+         xPathString = getDescriptor(entityType) + "/md:Extensions/mdui:UIInfo/mdui:InformationURL"
+      case 'privacystatementurl':
+         xPathString = getDescriptor(entityType) + "/md:Extensions/mdui:UIInfo/mdui:PrivacyStatementURL"
+      case 'organizationname':
+         xPathString = "./md:Organization/md:OrganizationName"
+      case 'organizationurl':
+         xPathString = "./md:Organization/md:OrganizationURL"       
+      case "logo":
+         xPathString = getDescriptor(entityType) + "/md:Extensions/mdui:UIInfo/mdui:Logo" 
+      case 'shibscope':
+         xPathString = getDescriptor(entityType) + "/md:Extensions/shibmd:Scope"
+      case _:
+         raise Exception("Unsupported element type " +elementName+ " requested") 
 
-    description_list = list()
-    if (entType.lower() == 'idp'):
-       entityType = "./md:IDPSSODescriptor"
-    if (entType.lower() == 'sp'):
-       entityType = "./md:SPSSODescriptor"
+   elements = EntityDescriptor.findall(xPathString, namespaces)
 
-    descriptions = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:Description" % entityType, namespaces)
+   elem_dict = dict()
+   for elem in elements:
+       lang = elem.get("{http://www.w3.org/XML/1998/namespace}lang")
+       elem_dict[lang] = elem.text
 
-    if (len(descriptions) != 0):
-       for desc in descriptions:
-           descriptions_dict = dict()
-           descriptions_dict['value'] = desc.text
-           descriptions_dict['lang'] = desc.get("{http://www.w3.org/XML/1998/namespace}lang")
-           description_list.append(descriptions_dict)
-    
-    return description_list
-
+   return elem_dict
 
 # Get MDUI Logo BIG
 def getLogoBig(EntityDescriptor,namespaces,entType='idp'):
@@ -243,164 +264,27 @@ def getLogoBig(EntityDescriptor,namespaces,entType='idp'):
            else:
               return ""
 
-
 # Get MDUI Logo SMALL
 def getLogoSmall(EntityDescriptor,namespaces,entType='idp',format="html"):
-    entityType = ""
-    if (entType.lower() == 'idp'):
-       entityType = "./md:IDPSSODescriptor"
-    if (entType.lower() == 'sp'):
-       entityType = "./md:SPSSODescriptor"
-    
-    logoUrl = ""
-    logos = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:Logo[@xml:lang='it']" % entityType,namespaces)
-    if (len(logos) != 0):
-       for logo in logos:
-           logoHeight = logo.get("height")
-           logoWidth = logo.get("width")
-           if (logoHeight == logoWidth):
-              # Avoid "embedded" logos
-              if ("data:image" in logo.text):
-                 logoUrl = "embeddedLogo"
-                 return logoUrl
-              else:
-                 logoUrl = logo.text
-                 return logoUrl
-    else:
-       logos = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:Logo[@xml:lang='en']" % entityType,namespaces)
-       if (len(logos) != 0):
-          for logo in logos:
-              logoHeight = logo.get("height")
-              logoWidth = logo.get("width")
-              if (logoHeight == logoWidth):
-                 # Avoid "embedded" logos
-                 if ("data:image" in logo.text):
-                    logoUrl = "embeddedLogo"
-                    return logoUrl
-                 else:
-                    logoUrl = logo.text
-                    return logoUrl
-       else:
-           logos = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:Logo" % entityType,namespaces)
-           if (len(logos) != 0):
-              for logo in logos:
-                  logoHeight = logo.get("height")
-                  logoWidth = logo.get("width")
-                  if (logoHeight == logoWidth):
-                     # Avoid "embedded" logos
-                     if ("data:image" in logo.text):
-                        logoUrl = "embeddedLogo"
-                        return logoUrl
-                     else:
-                        logoUrl = logo.text
-                        return logoUrl
-           else:
-              return ""
 
+   logos = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:Logo" % getDescriptor(entType), namespaces)
 
-# Get ServiceName
-def getServiceName(EntityDescriptor,namespaces,lang='en'):
-    serviceName = EntityDescriptor.find("./md:SPSSODescriptor/md:AttributeConsumingService/md:ServiceName[@xml:lang='it']", namespaces)
-    if (serviceName != None):
-       return serviceName.text
-    else:
-       serviceName = EntityDescriptor.find("./md:SPSSODescriptor/md:AttributeConsumingService/md:ServiceName[@xml:lang='en']", namespaces)
-       if (serviceName != None):
-          return serviceName.text
-       else:
-          return ""
+   logo_dict = dict()
 
+   for logo in logos:
+       lang = logo.get("{http://www.w3.org/XML/1998/namespace}lang")
+       logo_dict[lang] = logo.text
 
-# Get Organization Name
-def getOrganizationName(EntityDescriptor, namespaces,lang='en'):
-    orgName = EntityDescriptor.find("./md:Organization/md:OrganizationName[@xml:lang='%s']" % lang,namespaces)
-
-    if (orgName != None):
-       return orgName.text
-    else:
-       return ""
-
-
-# Get DisplayName
-def getDisplayName(EntityDescriptor, namespaces, entType='idp',lang='en'):
-   entityType = ""
-   if (entType.lower() == 'idp'):
-      entityType = "./md:IDPSSODescriptor"
-   if (entType.lower() == 'sp'):
-      entityType = "./md:SPSSODescriptor"
-
-   displayName = EntityDescriptor.find("%s/md:Extensions/mdui:UIInfo/mdui:DisplayName[@xml:lang='en']" % entityType,namespaces)
-   #langs = EntityDescriptor.find("%s/md:Extensions/mdui:DisplayName/@xml:lang" % entityType,namespaces)
-   #pj(langs)
-
-   #displayName = EntityDescriptor.find("%s/md:Extensions/mdui:DisplayName" % entityType,namespaces)
-
-   if (displayName != None):
-      #p(displayName.text)
-      return displayName.text
-   else:
-      displayName = EntityDescriptor.find("%s/md:Extensions/mdui:DisplayName[@xml:lang='en']" % entityType,namespaces)
-      if (displayName != None):
-         return displayName.text
-      else:
-         if (entType == 'sp'):
-            displayName = getServiceName(EntityDescriptor,namespaces)
-            if (displayName != None):
-               return displayName
-            else:
-               return ""
-         else:
-            displayName = getOrganizationName(EntityDescriptor,namespaces)
-            return displayName
-         
- 
-# Get MDUI InformationURLs
-def getInformationURLs(EntityDescriptor,namespaces,entType='idp',lang='en'):
-    entityType = ""
-    if (entType.lower() == 'idp'):
-       entityType = "./md:IDPSSODescriptor"
-    if (entType.lower() == 'sp'):
-       entityType = "./md:SPSSODescriptor"
-
-    info_pages = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:InformationURL" % entityType, namespaces)
-
-    info_dict = dict()
-    for infop in info_pages:
-        lang = infop.get("{http://www.w3.org/XML/1998/namespace}lang")
-        info_dict[lang] = infop.text
-
-    return info_dict
-
-
-# Get MDUI PrivacyStatementURLs
-def getPrivacyStatementURLs(EntityDescriptor,namespaces,entType='idp',lang='en'):
-    entityType = ""
-    if (entType.lower() == 'idp'):
-       entityType = "./md:IDPSSODescriptor"
-    if (entType.lower() == 'sp'):
-       entityType = "./md:SPSSODescriptor"
-
-    privacy_pages = EntityDescriptor.findall("%s/md:Extensions/mdui:UIInfo/mdui:PrivacyStatementURL" % entityType, namespaces)
-
-    privacy_dict = dict()
-    privacy_dict["en"] = ""
-
-    for pp in privacy_pages:
-        lang = pp.get("{http://www.w3.org/XML/1998/namespace}lang")
-        privacy_dict[lang] = pp.text
-
-    return privacy_dict
-
+   return logo_dict
 
 # Get OrganizationURL
-def getOrganizationURL(EntityDescriptor,namespaces,lang='en'):
-    orgUrl = EntityDescriptor.find("./md:Organization/md:OrganizationURL[@xml:lang='%s']" % lang,namespaces)
+# def getOrganizationURL(EntityDescriptor,namespaces,lang='en'):
+#     orgUrl = EntityDescriptor.find("./md:Organization/md:OrganizationURL[@xml:lang='%s']" % lang,namespaces)
 
-    if (orgUrl != None):
-       return orgUrl.text
-    else:
-       return ""
-
+#     if (orgUrl != None):
+#        return orgUrl.text
+#     else:
+#        return ""
 
 # Get RequestedAttribute
 def getRequestedAttribute(EntityDescriptor,namespaces):
@@ -472,25 +356,6 @@ def getEntityCategories(EntityDescriptor):
 
    return entCat
    
-
-def formatInfo(infoDict, format="html", lang="en"):
-   
-   match format:
-      case "html":
-         info = "<ul>"
-         for lng in infoDict:
-            flag = lng
-            
-            if lng == "en":
-               flag = "gb"
-            
-            info = info + "<li><a href='"+infoDict[lng]+ "' target='_blank'><img src='https://flagcdn.com/24x18/"+flag+".png' alt='Info "+lng.upper()+"' height='18' width='24' /></a></li>"
-         info = info + "</ul>"
-      case "json":
-         info = infoDict
-   
-   return info
-
 def formatPrivacy(privacyDict, format="html", lang="en"):
    #ToDO: propper language processing in case of HTML
    privacy = {}
@@ -510,21 +375,18 @@ def formatPrivacy(privacyDict, format="html", lang="en"):
    
    return privacy
 
-def formatOrg(orgName, orgUrl, format="html", lang="en"):
-   org={}
-   
-   match format:
-      case "html":
-         org = "<a href='%s' target='_blank'>%s</a>" % (orgUrl,orgName)
-      case "json":
-         org["name"]={}
-         org["name"]["en"] = orgName
-         org["url"]={}
-         org["url"]["en"] = orgUrl
-      case "txt":
-         org = orgName
-
-   return org
+def formatContacts(contacts, format="html", lang="en"):
+   #ToDO: propper language processing in case of HTML
+   if len(contacts)!=0:
+      match format:
+         case "json":
+            formatted_contact = []
+            for type, value in contacts.items():
+               formatted_contact.append(type + ": " + value)
+               
+            return {'': formatted_contact}
+         case _:
+            return ""
 
 ##################################################################################################################################
 #
@@ -551,60 +413,112 @@ def updateOIDCfedMetadata(leaf, element, elementValue, action="append"):
          if action == "append":
             leaf["metadata"]['authority_hints'].append(elementValue)
 
-def mkOIDCfedMetadata(leaf_dict, baseURL):
+def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
 
    if leaf_dict['type'] == 'op':
-      openid_provider = '''{
-            "token_endpoint_auth_methods_supported": ["client_secret_basic"],
-            "claims_parameter_supported": true,
-            "request_parameter_supported": true,
-            "request_uri_parameter_supported": true,
-            "require_request_uri_registration": false,
-            "grant_types_supported": ["authorization_code", "implicit", "refresh_token", "urn:ietf:params:oauth:grant-type:device_code", "urn:ietf:params:oauth:grant-type:token-exchange"],
-            "jwks_uri": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/OIDC/jwks",
-            "scopes_supported": ["openid", "profile", "email", "eduperson_assurance", "eduperson_entitlement", "eduperson_orcid", "eduperson_principal_name", "eduperson_scoped_affiliation", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "aarc", "ssh_public_key", "orcid", "schac_home_organization", "schac_personal_unique_code"],
-            "response_types_supported": ["code", "id_token token"],
-            "response_modes_supported": ["query", "fragment", "form_post"],
-            "subject_types_supported": ["public", "pairwise"],
-            "id_token_signing_alg_values_supported": ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"],
-            "userinfo_signing_alg_values_supported": ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"],
-            "request_object_signing_alg_values_supported": ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"],
-            "claim_types_supported": ["normal"],
-            "claims_supported": ["sub", "eduperson_targeted_id", "eduperson_unique_id", "eduperson_orcid", "eaahash", "uid", "name", "given_name", "email", "name", "family_name", "eduperson_scoped_affiliation", "eduperson_affiliation", "eduperson_principal_name", "eduperson_entitlement", "eduperson_assurance", "schac_personal_unique_code", "schac_home_organization", "eidas_person_identifier", "ssh_public_key", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "voperson_application_uid", "voperson_scoped_affiliation", "voperson_sor_id", "voperson_policy_agreement", "voperson_status", "eduid_cz_loa"],
-            "code_challenge_methods_supported": ["S256"],
-            "issuer": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''",
-            "authorization_endpoint": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/saml2sp/OIDC/authorization",
-            "token_endpoint": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/OIDC/token",
-            "userinfo_endpoint": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/OIDC/userinfo",
-            "introspection_endpoint": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/OIDC/introspect",
-            "revocation_endpoint": "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/OIDC/revoke"
-        }'''
-   
-      metadata=OrderedDict([
-         ("openid_provider", json.loads(openid_provider)),
+      openid_provider=OrderedDict([
+         ('token_endpoint_auth_methods_supported', ["client_secret_basic"]),
+         ('claims_parameter_supported', True),
+         ('request_parameter_supported', True),
+         ('request_uri_parameter_supported', True),
+         ('require_request_uri_registration"', False),
+         ('grant_types_supported', ["authorization_code", "implicit", "refresh_token", "urn:ietf:params:oauth:grant-type:device_code", "urn:ietf:params:oauth:grant-type:token-exchange"]),
+         ('jwks_uri', "'''+baseURL + '''leafs/''' + leaf_dict['id']+'''/OIDC/jwks"),
+         ('scopes_supported', ["openid", "profile", "email", "eduperson_assurance", "eduperson_entitlement", "eduperson_orcid", "eduperson_principal_name", "eduperson_scoped_affiliation", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "aarc", "ssh_public_key", "orcid", "schac_home_organization", "schac_personal_unique_code"]),
+         ('response_types_supported', ["code", "id_token token"]),
+         ('response_modes_supported', ["query", "fragment", "form_post"]),
+         ('subject_types_supported', ["public", "pairwise"]),
+         ('id_token_signing_alg_values_supported', ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"]),
+         ('userinfo_signing_alg_values_supported', ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"]),
+         ('request_object_signing_alg_values_supported', ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"]),
+         ('claim_types_supported', ["normal"]),
+         ('claims_supported', ["sub", "eduperson_targeted_id", "eduperson_unique_id", "eduperson_orcid", "eaahash", "uid", "name", "given_name", "email", "name", "family_name", "eduperson_scoped_affiliation", "eduperson_affiliation", "eduperson_principal_name", "eduperson_entitlement", "eduperson_assurance", "schac_personal_unique_code", "schac_home_organization", "eidas_person_identifier", "ssh_public_key", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "voperson_application_uid", "voperson_scoped_affiliation", "voperson_sor_id", "voperson_policy_agreement", "voperson_status", "eduid_cz_loa"]),
+         ('code_challenge_methods_supported', ["S256"]),
+         ('issuer', baseURL + 'leafs/' + leaf_dict['id']),
+         ('authorization_endpoint', baseURL + 'leafs/' + leaf_dict['id']+'/saml2sp/OIDC/authorization'),
+         ('token_endpoint', baseURL + 'leafs/' + leaf_dict['id']+'/OIDC/token'),
+         ('userinfo_endpoint', baseURL + 'leafs/' + leaf_dict['id']+'/OIDC/userinfo'),
+         ('introspection_endpoint', baseURL + 'leafs/' + leaf_dict['id']+'/OIDC/introspect'),
+         ('revocation_endpoint', baseURL + 'leafs/' + leaf_dict['id']+'/OIDC/revoke')
       ]) 
+
+      metadata=OrderedDict([
+         ("openid_provider", openid_provider),
+      ]) 
+
+      if leaf_dict['resourceName'] is not None:
+         appendConfig(metadata["openid_provider"], "display_name",leaf_dict['resourceName'], def_lang)
+
+      if leaf_dict['logo'] is not None:
+         appendConfig(metadata["openid_provider"], "logo_uri",leaf_dict['logo'], def_lang)
+      
+      if leaf_dict['description'] is not None:
+         appendConfig(metadata["openid_provider"], "description",leaf_dict['description'], def_lang)
+
+      if leaf_dict['info'] is not None:
+         appendConfig(metadata["openid_provider"], "information_uri",leaf_dict['info'], def_lang)
+
+      if 'privacy' in leaf_dict and leaf_dict['privacy'] is not None:
+         appendConfig(metadata["openid_provider"], "policy_uri",leaf_dict['privacy'], def_lang)
+      
+      if 'orgName' in leaf_dict and leaf_dict['orgName'] is not None:
+         appendConfig(metadata["openid_provider"], "organization_name",leaf_dict['orgName'], def_lang)
+
+      if 'orgURL' in leaf_dict and leaf_dict['orgURL'] is not None:
+         appendConfig(metadata["openid_provider"], "organization_uri",leaf_dict['orgURL'], def_lang)
+
+      # if leaf_dict['contacts'] is not None:
+      #    appendConfig(metadata["openid_provider"], "contacts", formatContacts(leaf_dict['contacts']), def_lang)
    
    if leaf_dict['type'] == 'rp':
       openid_relying_party=OrderedDict([
-      ('client_name', leaf_dict['resourceName']),
-      ('contacts',[leaf_dict['resourceContacts']['technical']['email']]),
-      ('application_type', "web"),
-      ('client_registration_types', ["automatic"]),
-      ('grant_types',["refresh_token", "authorization_code"]),
-      ('redirect_uris',[baseURL + "leafs/" + leaf_dict['id'] +"/oidc/rp/redirect"]),
-      ('response_types', ["code"]),
-      ('logo_uri', leaf_dict['logo']),
-      ('client_uri', leaf_dict['id']),
-      ('logo_uri', leaf_dict['logo']),
-      ('subject_type', "pairwise"),
-      ('tos_uri', baseURL + "leafs/" + leaf_dict['id'] +"/tos"),
-      ('policy_uri', leaf_dict['privacy']["en"]),
-      ('jwks',json.loads(exportKey(leaf_dict['keys'], "public")))
+         ('client_name', leaf_dict['resourceName']),
+         #('contacts',[leaf_dict['resourceContacts']['technical']['email']]),
+         ('application_type', "web"),
+         ('client_registration_types', ["automatic"]),
+         ('grant_types',["refresh_token", "authorization_code"]),
+         ('redirect_uris',[baseURL + "leafs/" + leaf_dict['id'] +"/oidc/rp/redirect"]),
+         ('response_types', ["code"]),
+         ('client_uri', leaf_dict['id']),
+         ('subject_type', "pairwise"),
+         ('tos_uri', baseURL + "leafs/" + leaf_dict['id'] +"/tos"),
+         #('policy_uri', leaf_dict['privacy']["en"]),
+         ('jwks',json.loads(exportKey(leaf_dict['keys'], "public")))
       ]) 
 
       metadata=OrderedDict([
          ("openid_relying_party", openid_relying_party),
       ]) 
+
+      if leaf_dict['resourceName'] is not None:
+         appendConfig(metadata["openid_relying_party"], "display_name",leaf_dict['resourceName'], def_lang)
+
+      if leaf_dict['logo'] is not None:
+         appendConfig(metadata["openid_relying_party"], "logo_uri",leaf_dict['logo'], def_lang)
+      
+      if leaf_dict['info'] is not None:
+         appendConfig(metadata["openid_relying_party"], "information_uri",leaf_dict['info'], def_lang)
+      
+      if leaf_dict['description'] is not None:
+         appendConfig(metadata["openid_relying_party"], "description",leaf_dict['description'], def_lang)
+
+      if leaf_dict['privacy'] is not None:
+         appendConfig(metadata["openid_relying_party"], "policy_uri",leaf_dict['privacy'], def_lang)
+
+      if 'orgName' in leaf_dict and leaf_dict['orgName'] is not None:
+         appendConfig(metadata["openid_relying_party"], "organization_name",leaf_dict['orgName'], def_lang)
+
+      if 'orgURL' in leaf_dict and leaf_dict['orgURL'] is not None:
+         appendConfig(metadata["openid_relying_party"], "organization_uri",leaf_dict['orgURL'], def_lang)    
+
+      # if leaf_dict['contacts'] is not None:
+      #    appendConfig(metadata["openid_relying_party"], "contacts", formatContacts(leaf_dict['contacts']), def_lang)
+ 
+
+      # if leaf_dict['tos_uri'] is not None:
+      #    pj(leaf_dict['tos_uri'])
+      #    appendConfig(metadata["openid_relying_party"], "tos_uri",leaf_dict['tos_uri'], def_lang)
+
 
    now = datetime.datetime.now()
    iat = datetime.datetime.timestamp(now) # Today
@@ -618,7 +532,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL):
    ("exp", exp), 
    ('jwks',json.loads(exportKey(leaf_dict['keys'], "public"))),
    ('metadata', metadata),
-   ('trust_marks', leaf_dict['entityCategories']),
+   #('trust_marks', leaf_dict['entityCategories']),
    ('authority_hints', [leaf_dict['taURL']]) # Lookup RA/TA dynamically
    ]) 
 
@@ -631,7 +545,18 @@ def mkSignedOIDCfedMetadata(leafMetadata, key):
    #encoded_data.serialize()  
    return encoded_data.serialize()
 
-##################################################################################################################################
+def appendConfig(configDict, configClaimName, elementDict, def_lang):
+   for lang, elem in elementDict.items():
+      # Set an element without lang using the default langage
+      if lang == def_lang or lang is None:
+         configDict[configClaimName] = elem
+
+      if lang is not None:
+         # Set langage specific content
+         configDict[configClaimName+"#"+lang] = elem
+
+
+################################################################################################################################
 #
 # testbed
 #
@@ -693,37 +618,9 @@ def writeFile(contents, fileid, outputpath, filetype='json', mkParents=True, ove
       
    contentFile.close()
 
-def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format="html", baseURL = "https://example.org/"):
-   p("Working on: " + inputfile) 
+def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format="html", baseURL = "https://example.org/", def_lang="en"):
+   p("INFO: Using metadata file: " + inputfile, True) 
     
-   # JSON/HTML SP Output per entity
-   # [
-   #   {
-   #     "id": #_sha1-hash-over-entityID_#,
-   #     "resourceName": "#_resource-display-name_#",
-   #     "resourceProvider": "#_organization-name-linked_#",
-   #     "resourceAttributes": {
-   #        "required": [
-   #                      "eduPersonPrincipalName",
-   #                      "email",
-   #                      "givenName",
-   #                      "surname"
-   #                    ],
-   #        "requested": []
-   #     },
-   #     "entityID": "#_entityID-resource_#",
-   #     "resourceContacts": {
-   #        "technical": [
-   #                       "#_email-address-list_#"
-   #                     ],
-   #        "support": [],
-   #        "administrative": []
-   #     },
-   #     "info": "<a href='#_info-url-it_#'>IT</a>, <a href='#_info-url-en_#'>EN</a>",
-   #     "privacy": "<a href='#_privacy-url-it_#'>IT</a>, <a href='#_privacy-url-en_#'>EN</a>"
-   #   }
-   # ]
-
    tree = ET.parse(inputfile)
    root = tree.getroot()
    sp = root.findall("./md:EntityDescriptor[md:SPSSODescriptor]", namespaces)
@@ -733,17 +630,25 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
    ra_name = raList[ra]["ra_name"]
    ta_url = raList[ra]["ta_url"]
 
+   thisEntityID = ""  # Do not look at a specific entity
+   #thisEntityID = "https://shib.unibo.it/idp/shibboleth"
+   #thisEntityID = "https://aai-login.kalaidos-fh.ch/idp/shibboleth"
+   
+
    for EntityDescriptor in idp:
          info = ""
          privacy = ""
-         
+         parseEntity = False
+
          # Get entityID
          entityID = getEntityID(EntityDescriptor,namespaces)
-         thisEntityID = entityID
-         #thisEntityID = "https://shib.unibo.it/idp/shibboleth"
-                       
-         if entityID == thisEntityID:
-            p("- Working on: " + entityID)
+
+         if entityID == thisEntityID or thisEntityID == "":
+            parseEntity = True
+
+
+         if parseEntity:
+            p("INFO: Working on: " + entityID, True)
             # Start processing SAML metadata for this entity and put that in a dict
 
             # Entity Categories live above IdP or SP descriptor, but ewe want to search on a per EntityID basis
@@ -753,35 +658,34 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             # Get hashed entityID
             cont_id = hashSHA1(entityID)
 
-            # If an entity is already in the list of entties we do not need to provess the metadata and we only need to append the TA
+            # If an entity is already in the list of entties we do not need to process the metadata and we only need to append the TA
             if cont_id in entityList: 
                # Update TA
                updateOIDCfedMetadata(entityList[cont_id], 'authority_hints',  ta_url)
             else:
 
+               #Get Shib MD Scope
+               shibscope = getElement(EntityDescriptor,namespaces, 'shibscope','idp')
+               
                # Get InformationURL
-               infoDict = getInformationURLs(EntityDescriptor, namespaces, 'idp')
+               info = getElement(EntityDescriptor,namespaces, 'informationurl','idp')
 
                # Get PrivacyStatementURL
-               privacyDict = getPrivacyStatementURLs(EntityDescriptor, namespaces, 'idp')
+               privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','idp')
 
                # Get ServiceName
-               serviceName = getDisplayName(EntityDescriptor,namespaces,'idp')
+               serviceName = getElement(EntityDescriptor,namespaces, 'displayname','idp')
 
-               # Build Resource Info Pages
-               info = formatInfo(infoDict, format)
-
-               # Build Resource Privacy Pages
-               privacy = formatPrivacy(privacyDict, format)
+               # Get Description
+               description = getElement(EntityDescriptor,namespaces, 'description','idp')
 
                # Get Requested Attributes
                requestedAttributes = getRequestedAttribute(EntityDescriptor,namespaces)
 
                # Get Organization
-               orgName = getOrganizationName(EntityDescriptor,namespaces,'en')
-               orgURL = getOrganizationURL(EntityDescriptor,namespaces,'en')
-               org = formatOrg(orgName, orgURL, format)
-
+               orgName = getElement(EntityDescriptor,namespaces, 'organizationname','idp')
+               orgURL = getElement(EntityDescriptor,namespaces, 'organizationurl','idp')
+               
                # Get Contacts
                techContacts = getContacts(EntityDescriptor, namespaces, 'technical', 'json')
                suppContacts = getContacts(EntityDescriptor, namespaces, 'support', 'json')
@@ -794,7 +698,7 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                   ('security', securityContacts),
                ])
 
-               logo = getLogoSmall(EntityDescriptor, namespaces, 'idp', format)
+               logo = getElement(EntityDescriptor,namespaces, 'logo','idp')
 
                # End of processing SAML metadata for this entity 
                # Now transform that to OIDCfed metadata
@@ -811,15 +715,19 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                ('raName',ra_name),
                ('taURL',ta_url),
                ('resourceName',serviceName),
-               ('resourceProvider', org),
+               ('description', description),
                ('resourceAttributes',requestedAttributes),
                ('entityID',entityID),
                ('resourceContacts',contacts), # Formatting not correct?
                ('info', info),
+               ('orgName', orgName),
+               ('orgURL', orgURL),
                ('logo', logo),
                ('privacy', privacy),
                ('entityCategories', ECs),
-               ('keys', keys)
+               ('keys', keys),
+               ('contacts', contacts),
+               ('shibscope', shibscope)
                ])     
 
                #Generate and Write json formatted metadata
@@ -832,7 +740,7 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                   ('metadata', leafMetadata)
                ]) 
 
-               p("   ... Done")
+               p("INFO: Processing "+entityID+" completed",True)
 
    for EntityDescriptor in sp:
       info = ""
@@ -840,9 +748,8 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
       
       # Get entityID
       entityID = getEntityID(EntityDescriptor,namespaces)
-      #p(entityID)
             
-      if entityID == entityID:
+      if entityID == thisEntityID:
          # Start processing SAML metadata for this entity and put that in a dict
 
          # Entity Categories live above IdP or SP descriptor, but we want to search on a per EntityID basis
@@ -852,35 +759,31 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
          # Get hashed entityID
          cont_id = hashSHA1(entityID)
 
-         # If an entity is already in the list of entties we do not need to provess the metadata and we only need to append the TA
+         # If an entity is already in the list of entties we do not need to process the metadata and we only need to append the TA
          if cont_id in entityList: 
-            # p("DUP found! " + cont_id)
             # Update TA
             updateOIDCfedMetadata(entityList[cont_id], 'authority_hints',  ta_url)
          else:
 
             # Get InformationURL
-            infoDict = getInformationURLs(EntityDescriptor, namespaces, 'sp')
+            info = getElement(EntityDescriptor,namespaces, 'informationurl','sp')
 
             # Get PrivacyStatementURL
-            privacyDict = getPrivacyStatementURLs(EntityDescriptor, namespaces, 'sp')
+            privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','sp')
 
             # Get ServiceName
-            serviceName = getDisplayName(EntityDescriptor,namespaces,'sp')
+            serviceName = getElement(EntityDescriptor,namespaces, 'servicename','sp')
 
-            # Build Resource Info Pages
-            info = formatInfo(infoDict, format)
-
-            # Build Resource Privacy Pages
-            privacy = formatPrivacy(privacyDict, format)
+            # Get Description
+            description = getElement(EntityDescriptor,namespaces, 'description','sp')
 
             # Get Requested Attributes
             requestedAttributes = getRequestedAttribute(EntityDescriptor,namespaces)
 
             # Get Organization
-            orgName = getOrganizationName(EntityDescriptor,namespaces,'en')
-            orgURL = getOrganizationURL(EntityDescriptor,namespaces,'en')
-            org = formatOrg(orgName, orgURL, format)
+            orgName = getElement(EntityDescriptor,namespaces, 'organizationname','sp')
+
+            orgURL = getElement(EntityDescriptor,namespaces, 'organizationurl','sp')
 
             # Get Contacts
             techContacts = getContacts(EntityDescriptor, namespaces, 'technical', 'json')
@@ -894,8 +797,8 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                ('security', securityContacts),
             ])
 
-            logo = getLogoSmall(EntityDescriptor, namespaces, 'idp', format)
-
+            logo = getElement(EntityDescriptor,namespaces, 'logo','sp')
+            
             # End of processing SAML metadata for this entity 
             # Now transform that to OIDCfed metadata
 
@@ -911,7 +814,7 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             ('raName',ra_name),
             ('taURL',ta_url),
             ('resourceName',serviceName),
-            ('resourceProvider', org),
+            ('description', description),
             ('resourceAttributes',requestedAttributes),
             ('entityID',entityID),
             ('resourceContacts',contacts), # Formatting not correct?
@@ -932,107 +835,6 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
                ('metadata', leafMetadata)
             ]) 
 
-def parseIdPs(ra_hash, inputfile, outputpath, namespaces, format="html"):
-   p("Working on: " + inputfile) 
-
-   # JSON IdP Output:
-   # [
-   #   {
-   #     "id": #_sha1-hash-over-entityID_#,
-   #     "resourceName": "#_resource-display-name_#",
-   #     "resourceProvider": "#_organization-name-linked_#",
-   #     "entityID": "#_entityID-resource_#",
-   #     "resourceContacts": {
-   #        "technical": [
-   #                       "#_email-address-list_#"
-   #                     ],
-   #        "support": [],
-   #        "administrative": []
-   #     },
-   #     "info": "<a href='#_info-url-it_#'>IT</a>, <a href='#_info-url-en_#'>EN</a>",
-   #     "privacy": "<a href='#_privacy-url-it_#'>IT</a>, <a href='#_privacy-url-en_#'>EN</a>"
-   #   }
-   # ]
-
-   tree = ET.parse(inputfile)
-   root = tree.getroot()
-   idp = root.findall("./md:EntityDescriptor[md:IDPSSODescriptor]", namespaces)
-
-   idps = dict()
-   list_idps = list()
-
-   #cont_id = ""
-
-   for EntityDescriptor in idp:
-      info = ""
-      privacy = ""
-      
-      # Get entityID
-      entityID = getEntityID(EntityDescriptor,namespaces)
-      p(entityID)
-
-      if entityID == entityID:
-          
-         # Get hashed entityID
-         cont_id = hashSHA1(entityID)
-
-         # Get InformationURL
-         infoDict = getInformationURLs(EntityDescriptor, namespaces, 'idp', "en")
-
-         # Get PrivacyStatementURL
-         privacyDict = getPrivacyStatementURLs(EntityDescriptor, namespaces, 'idp', "en")
-
-         # Get ResourceName
-         resourceName = getDisplayName(EntityDescriptor,namespaces,'idp', "en")
-
-         # Build Resource Info Pages
-         info = formatInfo(infoDict, format, "en")
-
-         # Build Resource Privacy Pages
-         privacy = formatPrivacy(privacyDict, format, "en")
-
-         # Get Organization
-         orgName = getOrganizationName(EntityDescriptor,namespaces,'en')
-         orgURL = getOrganizationURL(EntityDescriptor,namespaces,'en')
-         org = formatOrg(orgName, orgURL, format)
-
-         # Get Contacts
-         techContacts = getContacts(EntityDescriptor, namespaces, 'technical', format)
-         suppContacts = getContacts(EntityDescriptor, namespaces, 'support', format)
-         adminContacts = getContacts(EntityDescriptor, namespaces, 'administrative', format)
-         securityContacts = getContacts(EntityDescriptor, namespaces, 'other', format)
-
-         logo = getLogoSmall(EntityDescriptor, namespaces, 'idp', format)
-
-         contacts = OrderedDict([
-            ('technical', techContacts),
-            ('support', suppContacts),
-            ('administrative', adminContacts),
-            ('security', securityContacts),
-         ])
-
-         # Build IdP JSON or HTML Dictionary
-         idp = OrderedDict([
-         ('id',cont_id),
-         ('ra',ra_hash),
-         ('resourceName',resourceName),
-         ('resourceProvider', org),
-         ('entityID',entityID),
-         ('resourceContacts',contacts),
-         ('info', info),
-         ('logo', logo),
-         ('privacy', privacy)
-         ])     
-
-      list_idps.append(idp)
-
-   #all SPs in one fed 
-   path = outputpath + "/" + ra_hash + "/idps.json"
-   Path(outputpath + ra_hash).mkdir(parents=True, exist_ok=True)
-   result_idps = open(path, "w",encoding=None)
-   result_idps.write(json.dumps(list_idps,sort_keys=False, indent=4, ensure_ascii=False,separators=(',', ':')))
-   result_idps.close()
-
 def main(argv):
 
    # SAML metadata handling and general io param's
@@ -1051,6 +853,7 @@ def main(argv):
    #outputpath = OUTPUT_PATH
 
    ENROLLLEAFS = False
+   DEFAULT_LANGUAGE = "en"
 
    namespaces = {
       'xml':'http://www.w3.org/XML/1998/namespace',
@@ -1064,7 +867,7 @@ def main(argv):
    }
 
    #OIDCfed params
-   baseURL = "https:///leafs.oidf.lab.surf.nl/"
+   baseURL = "https://leafs.oidf.lab.surf.nl/"
    metadataURLpath = ".well-known/openid-federation/"
    
    # First load RA config
@@ -1077,10 +880,10 @@ def main(argv):
 
    # For each RA process the entities
    for ra in RAs.keys():
-      ParseRA = False
-      p("\nProcessing: " + RAs[ra]["ra_name"])
-      if RAs[ra]["ra_name"] == 'it.idem':
-         ParseRA = True
+      ParseRA = True
+      p("INFO: Processing " + RAs[ra]["ra_name"], True)
+      #if RAs[ra]["ra_name"] == 'ch.switchaai':
+      #   ParseRA = True
 
       if ParseRA:
          # Load entity data from federation endpoint(s) and retunn me the file locations
@@ -1088,15 +891,16 @@ def main(argv):
    
          # Now loop over RAs files to extract entity metadata and work that into a json containing a 'base' entity properties as lifted from SAML 
          # And a 'metadata' structure containing the OIDCfed metadata 
-         try:
-            parseLeaf(ra, RAs, entityList, RAs[ra]["filepath"][0], OUTPUT_PATH, namespaces, "json", baseURL)
-         except:
-            p("Could not parse leaf") 
-            pj(RAs[ra])
+         #try:
+         if RAs[ra]["filepath"][0] is not None:
+            parseLeaf(ra, RAs, entityList, RAs[ra]["filepath"][0], OUTPUT_PATH, namespaces, "json", baseURL, DEFAULT_LANGUAGE)
+         #except:
+         #   p("Could not parse leaf") 
+         #   pj(RAs[ra])
       
          p(RAs[ra]["ra_name"] + " Parsed")
       else:
-         p(".... Skipped")
+         p(".... Skipped", True)
 
 
    for leafID in entityList:
