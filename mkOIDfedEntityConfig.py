@@ -607,15 +607,23 @@ def writeFile(contents, fileid, outputpath, filetype='json', mkParents=True, ove
          Path(fedMetaPath).mkdir(parents=mkParents, exist_ok=overwrite)
          contentFile = open(fedMetaPath+"openid-federation", "w",encoding=None)
          contentFile.write(str(contents))  
+      case 'html':
+         # info html path
+         # Write a simple txt with the name and entityID of the institution for comparison
+         leafsPath = outputpath + "leafs/" + fileid + "/"
+         # Write the txt to the leaf url
+         Path(leafsPath).mkdir(parents=mkParents, exist_ok=overwrite)
+         contentFile = open(leafsPath+"index.html", "w",encoding=None)
+         contentFile.write(contents)
       case 'txt':
          # info txt path
-         # Write a simple txt with the name anentityID of the institution for comparison
+         # Write a simple txt with the name and entityID of the institution for comparison
          leafsPath = outputpath + "leafs/" + fileid + "/"
          # Write the txt to the leaf url
          Path(leafsPath).mkdir(parents=mkParents, exist_ok=overwrite)
          contentFile = open(leafsPath+"entity.txt", "w",encoding=None)
-         contentFile.write(contents)
-      
+         contentFile.write(contents)      
+
    contentFile.close()
 
 def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format="html", baseURL = "https://example.org/", def_lang="en"):
@@ -852,7 +860,7 @@ def main(argv):
    inputpath = INPUT_PATH
    #outputpath = OUTPUT_PATH
 
-   ENROLLLEAFS = False
+   ENROLLLEAFS = True
    DEFAULT_LANGUAGE = "en"
 
    namespaces = {
@@ -911,7 +919,8 @@ def main(argv):
       #Export and Write private key
       writeFile(exportKey(leafKeys, "private"), leafID, OUTPUT_PATH, "jwk")
       writeFile(leafMeta, leafID, OUTPUT_PATH, "json")
-      writeFile(leafEntityID , leafID, OUTPUT_PATH, "txt")
+      htmlContent = "<p>" + leafEntityID + "<br>OIDFed Entity Configuration:<ul>" + "<li><a href='"+ entityList[leafID]['metadata']['sub'] + "/.well-known/openid-federation'>JWT</a></li>" + "<li>OIDF Entity COnfiguration (JSON): <a href='"+ entityList[leafID]['metadata']['sub'] + "/entity.json'>JSON</a></li>" + "</ul></p>"
+      writeFile(htmlContent, leafID, OUTPUT_PATH, "html")
 
       #Generate and Write jwt signed metadata
       signedLeafMetadata = mkSignedOIDCfedMetadata(leafMeta, leafKeys)
