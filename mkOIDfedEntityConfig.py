@@ -81,7 +81,7 @@ def fetchFile(url, file_path):
 def parseMetadataXML(file_path):
     try:
       with open(file_path) as fd:
-          ent = xmltodict.parse(fd.read())
+          ent = xmltodict.parse(fd.read()) # type: ignore
           return ent
 
     except:
@@ -134,7 +134,7 @@ def parseFeds(fedsJson):
                   'reg_auth': fedsJson[fedID]['reg_auth'],
                   'country_code': ''.join(fedsJson[fedID].get('country_code')[i]),
                   'md_url': [fedsJson[fedID]['metadata_url']],
-                  'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.oidfed.lab.surf.nl'}
+                  'ta_url': 'https://'+''.join(fedsJson[fedID].get('country_code')[i])+'.'+fedID.lower()+ '.oidf.lab.surf.nl'}
 
                RAs[fedID_country] = thisFedData
    return RAs  
@@ -640,10 +640,9 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
    ra_name = raList[ra]["ra_name"]
    ta_url = raList[ra]["ta_url"]
 
-   thisEntityID = ""  # Do not look at a specific entity
+   thisEntityID = None  # Do not look at a specific entity
    #thisEntityID = "https://shib.unibo.it/idp/shibboleth"
-   #thisEntityID = "https://aai-login.kalaidos-fh.ch/idp/shibboleth"
-   
+   thisEntityID = "https://aai-login.kalaidos-fh.ch/idp/shibboleth"
 
    for EntityDescriptor in idp:
          info = ""
@@ -653,9 +652,9 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
          # Get entityID
          entityID = getEntityID(EntityDescriptor,namespaces)
 
-         if entityID == thisEntityID or thisEntityID == "":
-            parseEntity = True
-
+         if thisEntityID is not None:
+            if entityID == thisEntityID:
+               parseEntity = True
 
          if parseEntity:
             p("INFO: Working on: " + entityID, True)
@@ -892,8 +891,8 @@ def main(argv):
    for ra in RAs.keys():
       ParseRA = True
       p("INFO: Processing " + RAs[ra]["ra_name"], True)
-      #if RAs[ra]["ra_name"] == 'ch.switchaai':
-      #   ParseRA = True
+      if RAs[ra]["ra_name"] == 'ch.switchaai':
+         ParseRA = True
 
       if ParseRA:
          # Load entity data from federation endpoint(s) and retunn me the file locations
