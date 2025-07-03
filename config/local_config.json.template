@@ -1,4 +1,5 @@
 {
+    "use_letsencrypt": false,
     "acme_ca": "https://acme-v02.harica.gr/acme/****************/directory",
     "acme_eab": {
         "key_id": "****************",
