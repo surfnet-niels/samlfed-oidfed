@@ -2,3 +2,4 @@ testbed/
 feeds/
 logs/
 __pycache__/
+config/local_config.json
