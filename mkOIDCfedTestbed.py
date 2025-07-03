@@ -129,13 +129,18 @@ def main(argv):
     # ToDo: move all of this to a conf file
     ROOTPATH=os.getcwd()
     TESTBED_PATH = ROOTPATH + '/testbed'
-    CONFIG_PATH = TESTBED_PATH + '/config/'
+    CONFIG_PATH = ROOTPATH + '/config/'
     INPUT_PATH = ROOTPATH + '/feeds/'
     OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
     KEYS_PATH = TESTBED_PATH + '/keys/'
     TESTBED_BASEURL= 'oidf.lab.surf.nl'
     DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
-    EMAIL = "niels.vandijk@surf.nl"
+
+    # a local file contains all the secrets we need to keep secure. The template for this file is found in config/local.json.template
+    localConf = CONFIG_PATH + 'local_config.json'
+    config = loadJSON(localConf)
+    pj(config)
+    EMAIL = config["email"]
 
     EDUGAIN_RA_URI = 'https://www.edugain.org'
 
@@ -293,7 +298,6 @@ def main(argv):
             "volumes": [
                 TESTBED_PATH + "/leafs/conf/default.conf:/etc/nginx/conf.d/default.conf",
                 TESTBED_PATH + "/leafs/data/html/:/var/www/html",
-                "/etc/letsencrypt/live/oidf.lab.surf.nl/:/etc/ssl/testbed"
             ],
             "expose": ["8765"],
             "stop_grace_period": "'500ms'"
@@ -491,7 +495,16 @@ def main(argv):
     # Build caddy configuration file to proxy all containers
     #
     caddyConf = []
-    caddyConf.append('{\n     email '+EMAIL+'\n}\n')
+    caddyConf.append('''
+        {\n     email ' '''+ EMAIL +'''
+                acme_ca https://acme-v02.harica.gr/acme/3f3d3d1b-ade6-475a-a99c-9d7c0b424f5d/directory
+                acme_eab {
+                    key_id kp7qH9Xkqyu8BjWY5Rcp
+                    mac_key ZpBdFW6r-R13XBhbCliHIO0xBEjQEO85e9nNZK47jsU
+                }\n
+        }\n')
+    ''')
+
     # Add testbed static nginx
     caddyConf.append('\ntestbed.'+ TESTBED_BASEURL + ' {\n     reverse_proxy testbed:8765\n}  ')
     # Add leafs static nginx
