@@ -45,6 +45,9 @@ def write_log(message):
    f.close()
 
 def write_file(contents, filepath, mkpath=True, overwrite=False, type='txt'):
+   p("Writing!")
+   p("File: " + filepath)
+   
    if mkpath:
       Path(filepath).mkdir(parents=True, exist_ok=overwrite)
 
@@ -495,15 +498,19 @@ def main(argv):
     # Build caddy configuration file to proxy all containers
     #
     caddyConf = []
-    caddyConf.append('''
-{\n
-    email ' '''+ EMAIL +'''
-    acme_ca https://acme-v02.harica.gr/acme/3f3d3d1b-ade6-475a-a99c-9d7c0b424f5d/directory
+    
+    if config["use_letsencrypt"]:
+        caddyConf.append('\n{\n     email '+ EMAIL +'\n}  ')
+    else:
+        caddyConf.append('''
+{
+    email '''+ EMAIL +'''
+    acme_ca '''+ config["acme_ca"] +'''
     acme_eab {
-        key_id kp7qH9Xkqyu8BjWY5Rcp
-        mac_key ZpBdFW6r-R13XBhbCliHIO0xBEjQEO85e9nNZK47jsU
-    }\n
-}\n')
+        key_id '''+ config["acme_eab"]["key_id"] +'''
+        mac_key '''+ config["acme_eab"]["mac_key"] +'''
+    }
+}
     ''')
 
     # Add testbed static nginx
