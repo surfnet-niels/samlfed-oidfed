@@ -28,13 +28,13 @@ def loadJSON(json_file):
    with open(json_file) as json_file:
      return json.load(json_file)
 
-def p(message, writetolog=False):
+def p(message, writetolog=True):
    if writetolog:
       write_log(message)
    else:
       print(message)
     
-def pj(the_json, writetolog=False):
+def pj(the_json, writetolog=True):
     p(json.dumps(the_json, indent=4, sort_keys=False), writetolog)
 
 def write_log(message):
@@ -44,9 +44,8 @@ def write_log(message):
    f.write(timestamp +" "+ message+"\n")
    f.close()
 
-def write_file(contents, filepath, mkpath=True, overwrite=False, type='txt'):
-   p("Writing!")
-   p("File: " + filepath)
+def write_file(contents, filepath, mkpath=True, overwrite=False, writetolog=True, type='txt'):
+   p("Writing file: " + filepath, writetolog)
    
    if mkpath:
       Path(filepath).mkdir(parents=True, exist_ok=overwrite)
