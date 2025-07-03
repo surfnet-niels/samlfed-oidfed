@@ -496,12 +496,13 @@ def main(argv):
     #
     caddyConf = []
     caddyConf.append('''
-{\n     email ' '''+ EMAIL +'''
-        acme_ca https://acme-v02.harica.gr/acme/3f3d3d1b-ade6-475a-a99c-9d7c0b424f5d/directory
-        acme_eab {
-            key_id kp7qH9Xkqyu8BjWY5Rcp
-            mac_key ZpBdFW6r-R13XBhbCliHIO0xBEjQEO85e9nNZK47jsU
-        }\n
+{\n
+    email ' '''+ EMAIL +'''
+    acme_ca https://acme-v02.harica.gr/acme/3f3d3d1b-ade6-475a-a99c-9d7c0b424f5d/directory
+    acme_eab {
+        key_id kp7qH9Xkqyu8BjWY5Rcp
+        mac_key ZpBdFW6r-R13XBhbCliHIO0xBEjQEO85e9nNZK47jsU
+    }\n
 }\n')
     ''')
 
