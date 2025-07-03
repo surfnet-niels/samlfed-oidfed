@@ -45,7 +45,7 @@ def write_log(message):
    f.close()
 
 def write_file(contents, filepath, mkpath=True, overwrite=False, writetolog=True, type='txt'):
-   p("Writing file: " + filepath, writetolog)
+   p("[INFO] Writing file: " + filepath, writetolog)
    
    if mkpath:
       Path(filepath).mkdir(parents=True, exist_ok=overwrite)
