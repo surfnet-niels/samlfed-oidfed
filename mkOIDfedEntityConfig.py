@@ -883,7 +883,7 @@ def main(argv):
 
    # For each RA process the entities
    for ra in RAs.keys():
-      ParseRA = False
+      ParseRA = True
       p("INFO: Processing " + RAs[ra]["ra_name"], False)
 
       if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
