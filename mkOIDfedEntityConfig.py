@@ -852,7 +852,11 @@ def main(argv):
    #outputpath = OUTPUT_PATH
 
    ENROLLLEAFS = True
+   subordinates = ["#! /bin/bash"]
    DEFAULT_LANGUAGE = "en"
+
+   DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
+
 
    namespaces = {
       'xml':'http://www.w3.org/XML/1998/namespace',
@@ -879,9 +883,10 @@ def main(argv):
 
    # For each RA process the entities
    for ra in RAs.keys():
-      ParseRA = True
-      p("INFO: Processing " + RAs[ra]["ra_name"], True)
-      if RAs[ra]["ra_name"] == 'ch.switchaai':
+      ParseRA = False
+      p("INFO: Processing " + RAs[ra]["ra_name"], False)
+
+      if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
          ParseRA = True
 
       if ParseRA:
@@ -919,8 +924,12 @@ def main(argv):
 
       # Enroll the entities in the federation by registering them into the TAs
       if ENROLLLEAFS:
-         uploadMetadata(entityList[leafID]['base']['taURL'], entityList[leafID]['metadata']['sub'], entityList[leafID]['base']['type'])
-         time.sleep(5)
+         subordinates.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", entityList[leafID]['base']['raName'])+ " /tacli -c /data/config.yaml subordinates add " + entityList[leafID]['metadata']['sub'])
+         #uploadMetadata(entityList[leafID]['base']['taURL'], entityList[leafID]['metadata']['sub'], entityList[leafID]['base']['type'])
+         #time.sleep(5)
+
+   write_file('\n'.join(subordinates), TESTBED_PATH+'/leaf_subordinates.sh', mkpath=False, overwrite=True)
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])
