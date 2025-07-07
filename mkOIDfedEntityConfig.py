@@ -421,7 +421,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
          ('claims_parameter_supported', True),
          ('request_parameter_supported', True),
          ('request_uri_parameter_supported', True),
-         ('require_request_uri_registration"', False),
+         ('require_request_uri_registration', False),
          ('grant_types_supported', ["authorization_code", "implicit", "refresh_token", "urn:ietf:params:oauth:grant-type:device_code", "urn:ietf:params:oauth:grant-type:token-exchange"]),
          ('jwks_uri', baseURL + 'leafs/' + leaf_dict['id']+'/OIDC/jwks'),
          ('scopes_supported', ["openid", "profile", "email", "eduperson_assurance", "eduperson_entitlement", "eduperson_orcid", "eduperson_principal_name", "eduperson_scoped_affiliation", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "aarc", "ssh_public_key", "orcid", "schac_home_organization", "schac_personal_unique_code"]),
