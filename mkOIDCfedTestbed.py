@@ -40,7 +40,7 @@ def pj(the_json, writetolog=True):
 def write_log(message):
    datestamp = (datetime.datetime.now()).strftime("%Y-%m-%d")
    timestamp = (datetime.datetime.now()).strftime("%Y-%m-%d %X")
-   f = open("./logs/" + datestamp + "_apistatus.log", "a")
+   f = open("./logs/" + datestamp + "_testbed.log", "a")
    f.write(timestamp +" "+ message+"\n")
    f.close()
 
@@ -560,7 +560,7 @@ def main(argv):
         for entity in subordinates[ta]:
             subs.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", ta)+ " /tacli -c /data/config.yaml subordinates add " + entity)
 
-    write_file('\n'.join(subs), TESTBED_PATH+'/subordinates.sh', mkpath=False, overwrite=True)
+    write_file('\n'.join(subs), TESTBED_PATH+'/non_leaf_subordinates.sh', mkpath=False, overwrite=True)
 
     # Create a simple testbed overview page
     testbedPage = "<html><title>eduGAIN OIDfed testbed page</title><body>"
