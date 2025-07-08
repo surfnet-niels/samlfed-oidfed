@@ -397,7 +397,7 @@ def formatContacts(contacts, format="html", lang="en"):
 def mkJWK(entityHash): 
 
    kid= hashSHA1(entityHash + str(datetime.datetime.now()))
-
+   
    return jwk.JWK.generate(kty='EC', crv='P-256', use='sig', kid=kid)
 
 def exportKey(keys, type="public"):
@@ -539,7 +539,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
    return(leafMetadata)
 
 def mkSignedOIDCfedMetadata(leafMetadata, key):
-   encoded_data = jwt.JWT(header={"alg": "ES256"},
+   encoded_data = jwt.JWT(header={"alg": "ES256", "type": "entity-statement+jwt", "kid": key.key_id},
                      claims=leafMetadata)
    encoded_data.make_signed_token(key)
    #encoded_data.serialize()  
