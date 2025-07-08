@@ -213,6 +213,10 @@ def main(argv):
     os.makedirs(TESTBED_PATH+'/leafs/conf', mode=0o777, exist_ok=True)
     os.makedirs(TESTBED_PATH+'/leafs/data/html', mode=0o777, exist_ok=True)
 
+    # Copy incubator favicon static containers
+    os.popen('cp templates/favicon.ico '+TESTBED_PATH+ '/leafs/data/html/favicon.ico')
+    os.popen('cp templates/favicon.ico '+TESTBED_PATH+ '/testbed/data/html/favicon.ico')   
+
     # Create nginx config for static containers
     os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/leafs/conf/default.conf')
     os.popen('cp templates/nginx_default.conf '+TESTBED_PATH+ '/testbed/conf/default.conf')
