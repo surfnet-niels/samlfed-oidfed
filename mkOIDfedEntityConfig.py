@@ -539,7 +539,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
    return(leafMetadata)
 
 def mkSignedOIDCfedMetadata(leafMetadata, key):
-   encoded_data = jwt.JWT(header={"alg": "ES256", "type": "entity-statement+jwt", "kid": key.key_id},
+   encoded_data = jwt.JWT(header={"alg": "ES256", "typ": "entity-statement+jwt", "kid": key.key_id},
                      claims=leafMetadata)
    encoded_data.make_signed_token(key)
    #encoded_data.serialize()  
