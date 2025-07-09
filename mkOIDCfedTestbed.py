@@ -562,7 +562,7 @@ def main(argv):
     subs = ["#! /bin/bash"]
     for ta in subordinates.keys():
         for entity in subordinates[ta]:
-            subs.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", ta)+ " /tacli -c /data/config.yaml subordinates add " + entity)
+            subs.append("echo \""+entity+" \"\n && docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", ta)+ " /tacli -c /data/config.yaml subordinates add " + entity)
 
     write_file('\n'.join(subs), TESTBED_PATH+'/non_leaf_subordinates.sh', mkpath=False, overwrite=True)
 
