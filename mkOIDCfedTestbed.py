@@ -578,6 +578,8 @@ def main(argv):
             <td>Name</td>
             <td>Country</td>
             <td>Trust Anchor</td>
+            <td width="5"></td>
+            <td>Entities</td>
         </tr>
     '''
 
@@ -587,6 +589,8 @@ def main(argv):
                 <td>'''+raConf[ra]["display_name"]+'''</td>
                 <td>'''+raConf[ra]["country_code"]+'''</td>
                 <td><a href="'''+raConf[ra]["ta_url"]+'''/.well-known/openid-federation">'''+raConf[ra]["ta_url"]+'''</a></td>
+                <td width="5"></td>
+                <td><a href="'''+raConf[ra]["ta_url"]+'''/list">Entities</a></td>
             </tr>
         '''
     raTable += '</table>'
