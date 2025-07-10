@@ -5,11 +5,13 @@ import json
 import sys
 import subprocess
 
+subordinatesFile = sys.argv[1] 
+
 def loadJSON(json_file):
    with open(json_file) as json_file:
      return json.load(json_file)
 
-data = loadJSON("subordinates.json")
+data = loadJSON(subordinatesFile)
 
 for ta in data.keys():
     print(ta)
