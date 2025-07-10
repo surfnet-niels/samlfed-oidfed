@@ -15,68 +15,10 @@ import time
 import urllib.request
 from pathlib import Path
 from jwcrypto import jwk, jwt
+from utils import p, pj, loadJSON, write_file, write_log, is_file_older_than_x_days, fetchFile
 
 LOGDEBUG = True
 WRITETOLOG = False
-
-##################################################################################################################################
-#
-# Config and logs handling functions
-#
-##################################################################################################################################
-def loadJSONconfig(json_file):
-   with open(json_file) as json_file:
-     return json.load(json_file)
-
-def p(message, writetolog=WRITETOLOG):
-   if writetolog:
-      write_log(message)
-   else:
-      print(message)
-    
-def pj(the_json, writetolog=WRITETOLOG):
-   if writetolog:
-      write_log(json.dumps(the_json, indent=4, sort_keys=False), writetolog)       
-   else:    
-      p(json.dumps(the_json, indent=4, sort_keys=False), writetolog)
-
-def write_log(message):
-   datestamp = (datetime.datetime.now()).strftime("%Y-%m-%d")
-   timestamp = (datetime.datetime.now()).strftime("%Y-%m-%d %X")
-   f = open("./logs/" + datestamp + "_status.log", "a")
-   f.write(timestamp +" "+ message+"\n")
-   f.close()
-
-def write_file(contents, filepath, mkpath=True, overwrite=False):
-   if mkpath:
-      Path(filepath).mkdir(parents=True, exist_ok=overwrite)
-
-   f = open(filepath, "a")
-   f.write(contents+"\n")
-   f.close()
-
-##################################################################################################################################
-#
-# Metadata url/file handling functions
-#
-##################################################################################################################################
-
-def is_file_older_than_x_days(file, days=1): 
-    file_time = os.path.getmtime(file) 
-    # Check against 24 hours 
-    if (time.time() - file_time) / 3600 > 24*days: 
-        return True
-    else: 
-        return False
-
-def fetchFile(url, file_path):
-  try:
-    urllib.request.urlretrieve(url, file_path)
-    return True
-  except Exception as error:
-    p("ERROR: Could not download from URL: " + url, LOGDEBUG)
-    p("ERROR: Encountered " + type(error).__name__, LOGDEBUG)
-    return False
 
 def parseMetadataXML(file_path):
     try:
@@ -852,7 +794,7 @@ def main(argv):
    #outputpath = OUTPUT_PATH
 
    ENROLLLEAFS = True
-   subordinates = ["#! /bin/bash"]
+   subordinates = {}
    DEFAULT_LANGUAGE = "en"
 
    DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
@@ -924,12 +866,15 @@ def main(argv):
 
       # Enroll the entities in the federation by registering them into the TAs
       if ENROLLLEAFS:
-         subordinates.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", entityList[leafID]['base']['raName'])+ " /tacli -c /data/config.yaml subordinates add " + entityList[leafID]['metadata']['sub'])
+         if entityList[leafID]['base']['raName'] not in subordinates:
+            subordinates[entityList[leafID]['base']['raName']] = []
+         subordinates[entityList[leafID]['base']['raName']].append(entityList[leafID]['metadata']['sub'])
+         #subordinates.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", entityList[leafID]['base']['raName'])+ " /tacli -c /data/config.yaml subordinates add " + entityList[leafID]['metadata']['sub'])
          #uploadMetadata(entityList[leafID]['base']['taURL'], entityList[leafID]['metadata']['sub'], entityList[leafID]['base']['type'])
          #time.sleep(5)
 
-   write_file('\n'.join(subordinates), TESTBED_PATH+'/leaf_subordinates.sh', mkpath=False, overwrite=True)
-
+   if ENROLLLEAFS:   
+      write_file(subordinates, TESTBED_PATH+'/leafs.subordinate.json', mkpath=False, overwrite=False, type="json")
 
 if __name__ == "__main__":
    main(sys.argv[1:])
