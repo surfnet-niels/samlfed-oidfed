@@ -493,7 +493,7 @@ def main(argv):
                 if ta in rpConf[rp]["tas"] and ta != "edugain":
                     subordinates[ta].append(expandTestbedURL(rp,TESTBED_BASEURL))
 
-    write_file(subordinates, TESTBED_PATH+'/ia.subordinate.json', mkpath=False, overwrite=False, type="json")
+    write_file(subordinates, CONFIG_PATH+'subordinates/ia.subordinate.json', mkpath=False, overwrite=False, type="json")
 
     # Create executable to inject subordinates into reevant containers
     # subs = ["#! /bin/bash"]

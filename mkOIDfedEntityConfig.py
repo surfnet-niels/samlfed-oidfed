@@ -874,7 +874,7 @@ def main(argv):
          #time.sleep(5)
 
    if ENROLLLEAFS:   
-      write_file(subordinates, TESTBED_PATH+'/leafs.subordinate.json', mkpath=False, overwrite=False, type="json")
+      write_file(subordinates, CONFIG_PATH+'subordinates/leafs.subordinate.json', mkpath=False, overwrite=False, type="json")
 
 if __name__ == "__main__":
    main(sys.argv[1:])
