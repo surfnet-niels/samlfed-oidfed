@@ -17,5 +17,5 @@ for ta in data.keys():
     print(ta)
     for sub in data[ta]:
        print(sub)
-       subprocess.run("docker exec testbed-" +ta+ "-1 /tacli -c /data/config.yaml subordinates add " + sub)
+       subprocess.run("docker exec testbed-" +ta+ "-1 /tacli -c /data/config.yaml subordinates add " + sub, shell=True)
     print("--") 
