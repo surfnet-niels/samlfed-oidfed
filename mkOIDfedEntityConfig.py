@@ -219,15 +219,6 @@ def getLogoSmall(EntityDescriptor,namespaces,entType='idp',format="html"):
 
    return logo_dict
 
-# Get OrganizationURL
-# def getOrganizationURL(EntityDescriptor,namespaces,lang='en'):
-#     orgUrl = EntityDescriptor.find("./md:Organization/md:OrganizationURL[@xml:lang='%s']" % lang,namespaces)
-
-#     if (orgUrl != None):
-#        return orgUrl.text
-#     else:
-#        return ""
-
 # Get RequestedAttribute
 def getRequestedAttribute(EntityDescriptor,namespaces):
     reqAttr = EntityDescriptor.findall("./md:SPSSODescriptor/md:AttributeConsumingService/md:RequestedAttribute", namespaces)
@@ -247,7 +238,6 @@ def getRequestedAttribute(EntityDescriptor,namespaces):
     requestedAttributes['requested'] = requestedList
 
     return requestedAttributes
-
 
 # Get Contacts
 def getContacts(EntityDescriptor,namespaces,contactType='technical', format="html"):
@@ -388,8 +378,17 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
          ("openid_provider", openid_provider),
       ]) 
 
-      if leaf_dict['resourceName'] is not None:
-         appendConfig(metadata["openid_provider"], "display_name",leaf_dict['resourceName'], def_lang)
+      useEntityID = { 'en': leaf_dict['entityID'] }
+      appendConfig(metadata["openid_provider"], "display_name",useEntityID, def_lang)
+      appendConfig(metadata["openid_provider"], "client_name",useEntityID, def_lang)
+      
+      if leaf_dict['resourceName'] is not None or leaf_dict['displayName'] is not None:
+         if bool(leaf_dict['resourceName']):
+            appendConfig(metadata["openid_provider"], "display_name",leaf_dict['resourceName'], def_lang)
+            appendConfig(metadata["openid_provider"], "client_name",leaf_dict['resourceName'], def_lang)
+         elif bool(leaf_dict['displayName']):
+            appendConfig(metadata["openid_provider"], "display_name",leaf_dict['displayName'], def_lang)
+            appendConfig(metadata["openid_provider"], "client_name",leaf_dict['displayName'], def_lang)
 
       if leaf_dict['logo'] is not None:
          appendConfig(metadata["openid_provider"], "logo_uri",leaf_dict['logo'], def_lang)
@@ -414,7 +413,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
    
    if leaf_dict['type'] == 'rp':
       openid_relying_party=OrderedDict([
-         ('client_name', leaf_dict['resourceName']),
+         #('client_name', leaf_dict['resourceName']),
          #('contacts',[leaf_dict['resourceContacts']['technical']['email']]),
          ('application_type', "web"),
          ('client_registration_types', ["automatic"]),
@@ -432,8 +431,17 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
          ("openid_relying_party", openid_relying_party),
       ]) 
 
-      if leaf_dict['resourceName'] is not None:
+      useEntityID = { 'en': leaf_dict['entityID'] }
+      appendConfig(metadata["openid_relying_party"], "display_name",useEntityID, def_lang)
+      appendConfig(metadata["openid_relying_party"], "client_name",useEntityID, def_lang)
+
+      if leaf_dict['resourceName']:
          appendConfig(metadata["openid_relying_party"], "display_name",leaf_dict['resourceName'], def_lang)
+         appendConfig(metadata["openid_relying_party"], "client_name",leaf_dict['resourceName'], def_lang)
+      
+      if leaf_dict['displayName']:
+         appendConfig(metadata["openid_relying_party"], "display_name",leaf_dict['displayName'], def_lang)
+         appendConfig(metadata["openid_relying_party"], "client_name",leaf_dict['displayName'], def_lang)
 
       if leaf_dict['logo'] is not None:
          appendConfig(metadata["openid_relying_party"], "logo_uri",leaf_dict['logo'], def_lang)
@@ -615,7 +623,10 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             privacy = getElement(EntityDescriptor,namespaces, 'privacystatementurl','idp')
 
             # Get ServiceName
-            serviceName = getElement(EntityDescriptor,namespaces, 'displayname','idp')
+            serviceName = getElement(EntityDescriptor,namespaces, 'servicename','idp')
+
+            # Get displayName
+            displayName = getElement(EntityDescriptor,namespaces, 'displayname','idp')
 
             # Get Description
             description = getElement(EntityDescriptor,namespaces, 'description','idp')
@@ -656,6 +667,7 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
             ('raName',ra_name),
             ('taURL',ta_url),
             ('resourceName',serviceName),
+            ('displayName',displayName),
             ('description', description),
             ('resourceAttributes',requestedAttributes),
             ('entityID',entityID),
@@ -715,6 +727,9 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
          # Get ServiceName
          serviceName = getElement(EntityDescriptor,namespaces, 'servicename','sp')
 
+         # Get ServiceName
+         displayName = getElement(EntityDescriptor,namespaces, 'displayname','sp')         
+
          # Get Description
          description = getElement(EntityDescriptor,namespaces, 'description','sp')
 
@@ -755,6 +770,7 @@ def parseLeaf(ra, raList, entityList, inputfile, outputpath, namespaces, format=
          ('raName',ra_name),
          ('taURL',ta_url),
          ('resourceName',serviceName),
+         ('displayName',displayName),
          ('description', description),
          ('resourceAttributes',requestedAttributes),
          ('entityID',entityID),
@@ -828,8 +844,11 @@ def main(argv):
       ParseRA = True
       p("INFO: Processing " + RAs[ra]["ra_name"], False)
 
-      if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
-         ParseRA = True
+      #if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
+      #   ParseRA = True
+
+      #if RAs[ra]["ra_name"] == 'gh.garnetif':
+      #   ParseRA = True
 
       if ParseRA:
          # Load entity data from federation endpoint(s) and retunn me the file locations
@@ -869,9 +888,6 @@ def main(argv):
          if entityList[leafID]['base']['raName'] not in subordinates:
             subordinates[entityList[leafID]['base']['raName']] = []
          subordinates[entityList[leafID]['base']['raName']].append(entityList[leafID]['metadata']['sub'])
-         #subordinates.append("docker exec " +DOCKER_CONTAINER_NAME.replace("~~container_name~~", entityList[leafID]['base']['raName'])+ " /tacli -c /data/config.yaml subordinates add " + entityList[leafID]['metadata']['sub'])
-         #uploadMetadata(entityList[leafID]['base']['taURL'], entityList[leafID]['metadata']['sub'], entityList[leafID]['base']['type'])
-         #time.sleep(5)
 
    if ENROLLLEAFS:   
       write_file(subordinates, CONFIG_PATH+'subordinates/leafs.subordinate.json', mkpath=False, overwrite=False, type="json")
