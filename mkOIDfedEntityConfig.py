@@ -410,7 +410,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
 
       # if leaf_dict['contacts'] is not None:
       #    appendConfig(metadata["openid_provider"], "contacts", formatContacts(leaf_dict['contacts']), def_lang)
-   
+
    if leaf_dict['type'] == 'rp':
       openid_relying_party=OrderedDict([
          #('client_name', leaf_dict['resourceName']),
@@ -424,7 +424,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
          ('subject_type', "pairwise"),
          ('tos_uri', baseURL + "leafs/" + leaf_dict['id'] +"/tos"),
          #('policy_uri', leaf_dict['privacy']["en"]),
-         ('jwks',json.loads(exportKey(leaf_dict['keys'], "public")))
+         ('jwks', json.loads(exportKey(leaf_dict['keys'], "public")))
       ]) 
 
       metadata=OrderedDict([
@@ -480,7 +480,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
    ("sub", baseURL + "leafs/" + leaf_dict['id'] +"/"),
    ("iat", iat), 
    ("exp", exp), 
-   ('jwks',json.loads(exportKey(leaf_dict['keys'], "public"))),
+   ('jwks',{'keys': [ json.loads(exportKey(leaf_dict['keys'], "public"))]}),
    ('metadata', metadata),
    #('trust_marks', leaf_dict['entityCategories']),
    ('authority_hints', [leaf_dict['taURL']]) # Lookup RA/TA dynamically
@@ -841,14 +841,14 @@ def main(argv):
 
    # For each RA process the entities
    for ra in RAs.keys():
-      ParseRA = True
+      ParseRA = False
       p("INFO: Processing " + RAs[ra]["ra_name"], False)
 
       #if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
       #   ParseRA = True
 
-      #if RAs[ra]["ra_name"] == 'gh.garnetif':
-      #   ParseRA = True
+      if RAs[ra]["ra_name"] == 'no.feide':
+         ParseRA = True
 
       if ParseRA:
          # Load entity data from federation endpoint(s) and retunn me the file locations
