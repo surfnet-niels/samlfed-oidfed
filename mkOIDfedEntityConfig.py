@@ -841,14 +841,14 @@ def main(argv):
 
    # For each RA process the entities
    for ra in RAs.keys():
-      ParseRA = False
+      ParseRA = True
       p("INFO: Processing " + RAs[ra]["ra_name"], False)
 
       #if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
       #   ParseRA = True
 
-      if RAs[ra]["ra_name"] == 'no.feide':
-         ParseRA = True
+      #if RAs[ra]["ra_name"] == 'no.feide':
+      #   ParseRA = True
 
       if ParseRA:
          # Load entity data from federation endpoint(s) and retunn me the file locations
