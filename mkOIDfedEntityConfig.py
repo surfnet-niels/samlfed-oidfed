@@ -15,7 +15,7 @@ import time
 import urllib.request
 from pathlib import Path
 from jwcrypto import jwk, jwt
-from utils import p, pj, loadJSON, write_file, write_log, is_file_older_than_x_days, fetchFile
+from utils import p, pj, loadJSON, write_file, write_log, is_file_older_than_x_days, fetchFile, safeFileName
 
 LOGDEBUG = True
 WRITETOLOG = False
@@ -72,7 +72,7 @@ def parseFeds(fedsJson):
             for i in range(0,len(fedsJson[fedID].get('countries'))): 
                fedID_country = ''.join(fedsJson[fedID].get('country_code')[i].lower()) +'.'+fedID.lower() 
                thisFedData = {'display_name': fedsJson[fedID]['name'] + ' (' + ''.join(fedsJson[fedID].get('countries')[i]) +')',
-                  'name':  ''.join(fedsJson[fedID].get('country_code')[i].lower())+ '_' + fedsJson[fedID]['name'].lower(),
+                  'name':  ''.join(fedsJson[fedID].get('country_code')[i].lower())+ '_' + safeFileName(fedsJson[fedID]['name'].lower()),
                   'reg_auth': fedsJson[fedID]['reg_auth'],
                   'country_code': ''.join(fedsJson[fedID].get('country_code')[i]),
                   'md_url': [fedsJson[fedID]['metadata_url']],
@@ -356,7 +356,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
          ('require_request_uri_registration', False),
          ('grant_types_supported', ["authorization_code", "implicit", "refresh_token", "urn:ietf:params:oauth:grant-type:device_code", "urn:ietf:params:oauth:grant-type:token-exchange"]),
          ('jwks_uri', baseURL + 'leafs/' + leaf_dict['id']+'/OIDC/jwks'),
-         ('scopes_supported', ["openid", "profile", "email", "eduperson_assurance", "eduperson_entitlement", "eduperson_orcid", "eduperson_principal_name", "eduperson_scoped_affiliation", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "aarc", "ssh_public_key", "orcid", "schac_home_organization", "schac_personal_unique_code"]),
+         ('scopes_supported', ["openid", "profile", "email", "eduperson_assurance", "eduperson_entitlement", "eduperson_orcid", "eduperson_principal_name", "eduperson_scoped_affiliation", "schac_home_organization"]),
          ('response_types_supported', ["code", "id_token token"]),
          ('response_modes_supported', ["query", "fragment", "form_post"]),
          ('subject_types_supported', ["public", "pairwise"]),
@@ -364,7 +364,7 @@ def mkOIDCfedMetadata(leaf_dict, baseURL, def_lang="en"):
          ('userinfo_signing_alg_values_supported', ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"]),
          ('request_object_signing_alg_values_supported', ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "HS256", "HS384", "HS512"]),
          ('claim_types_supported', ["normal"]),
-         ('claims_supported', ["sub", "eduperson_targeted_id", "eduperson_unique_id", "eduperson_orcid", "eaahash", "uid", "name", "given_name", "email", "name", "family_name", "eduperson_scoped_affiliation", "eduperson_affiliation", "eduperson_principal_name", "eduperson_entitlement", "eduperson_assurance", "schac_personal_unique_code", "schac_home_organization", "eidas_person_identifier", "ssh_public_key", "voperson_external_affiliation", "voperson_external_id", "voperson_id", "voperson_application_uid", "voperson_scoped_affiliation", "voperson_sor_id", "voperson_policy_agreement", "voperson_status", "eduid_cz_loa"]),
+         ('claims_supported', ["sub", "eduperson_targeted_id", "eduperson_unique_id", "eduperson_orcid", "uid", "name", "given_name", "email", "name", "family_name", "eduperson_scoped_affiliation", "eduperson_affiliation", "eduperson_principal_name", "eduperson_entitlement", "eduperson_assurance", "schac_home_organization"]),
          ('code_challenge_methods_supported', ["S256"]),
          ('issuer', baseURL + 'leafs/' + leaf_dict['id']),
          ('authorization_endpoint', baseURL + 'leafs/' + leaf_dict['id']+'/saml2sp/OIDC/authorization'),
@@ -802,19 +802,23 @@ def main(argv):
    TESTBED_PATH = ROOTPATH + '/testbed'
    OUTPUT_PATH = TESTBED_PATH + '/leafs/data/html/'
    KEYS_PATH = ROOTPATH + '/keys/'
-
-   EDUGAIN_RA_URI = 'https://www.edugain.org'
+   ENROLLLEAFS = True
+   
    entityList = {}
    inputfile = None
    inputpath = INPUT_PATH
    #outputpath = OUTPUT_PATH
 
-   ENROLLLEAFS = True
    subordinates = {}
-   DEFAULT_LANGUAGE = "en"
 
-   DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
+   # a local file contains all the secrets we need to keep secure. 
+   # The template for this file is found in config/*.json.template
+   localConf = CONFIG_PATH + 'leafs_config.json'
+   config = loadJSON(localConf)
+   pj(config, False)
 
+   EDUGAIN_RA_URI = config["edugain_ra_url"]
+   DEFAULT_LANGUAGE = config["default_language"]
 
    namespaces = {
       'xml':'http://www.w3.org/XML/1998/namespace',
@@ -828,45 +832,42 @@ def main(argv):
    }
 
    #OIDCfed params
-   baseURL = "https://leafs.oidf.lab.surf.nl/"
+   baseURL = config["leaf_base_url"]
    metadataURLpath = ".well-known/openid-federation/"
    
-   # First load RA config
+   # First load RA config. We can get this either by using the RAs file, 
+   # or by querying the eduGAIN technical database 
    #raConf = loadJSONconfig(CONFIG_PATH + 'RAs.json')
-   edugainFedsURL = 'https://technical.edugain.org/api.php?action=list_feds_full'
-   allFeds = getFeds(edugainFedsURL, INPUT_PATH)
-   raConf = parseFeds(allFeds)
-   
-   RAs = setRAdata(raConf, INPUT_PATH, EDUGAIN_RA_URI)
+   if config["use_edugain_api"]:
+      edugainFedsURL = config["edugain_fed_api"]
+      allFeds = getFeds(edugainFedsURL, INPUT_PATH)
+      raConf = parseFeds(allFeds)
+      RAs = setRAdata(raConf, INPUT_PATH, EDUGAIN_RA_URI)
+      use_RAs = RAs.keys()
+   else:
+      raConf = loadJSON(CONFIG_PATH + 'RAs.json')
+      raConf =  {safeFileName(k): v for k, v in raConf.items()}
+      RAs = setRAdata(raConf, INPUT_PATH, EDUGAIN_RA_URI)
+      use_RAs = [safeFileName(ra) for ra in config["use_RAs"]]
 
+   
    # For each RA process the entities
-   for ra in RAs.keys():
-      ParseRA = True
+   for ra in use_RAs:
       p("INFO: Processing " + RAs[ra]["ra_name"], False)
 
-      #if RAs[ra]["ra_name"] == 'ch.switchaai' or RAs[ra]["ra_name"] == 'gb.uk-federation':
-      #   ParseRA = True
+      # Load entity data from federation endpoint(s) and retunn me the file locations
+      RAs[ra]["filepath"] = fetchMetadata(RAs[ra]["md_url"], RAs[ra]["ra_name"], INPUT_PATH)
 
-      #if RAs[ra]["ra_name"] == 'no.feide':
-      #   ParseRA = True
-
-      if ParseRA:
-         # Load entity data from federation endpoint(s) and retunn me the file locations
-         RAs[ra]["filepath"] = fetchMetadata(RAs[ra]["md_url"], RAs[ra]["ra_name"], INPUT_PATH)
+      # Now loop over RAs files to extract entity metadata and work that into a json containing a 'base' entity properties as lifted from SAML 
+      # And a 'metadata' structure containing the OIDCfed metadata 
+      #try:
+      if RAs[ra]["filepath"][0] is not None:
+         parseLeaf(ra, RAs, entityList, RAs[ra]["filepath"][0], OUTPUT_PATH, namespaces, "json", baseURL, DEFAULT_LANGUAGE)
+      #except:
+      #   p("Could not parse leaf") 
+      #   pj(RAs[ra])
    
-         # Now loop over RAs files to extract entity metadata and work that into a json containing a 'base' entity properties as lifted from SAML 
-         # And a 'metadata' structure containing the OIDCfed metadata 
-         #try:
-         if RAs[ra]["filepath"][0] is not None:
-            parseLeaf(ra, RAs, entityList, RAs[ra]["filepath"][0], OUTPUT_PATH, namespaces, "json", baseURL, DEFAULT_LANGUAGE)
-         #except:
-         #   p("Could not parse leaf") 
-         #   pj(RAs[ra])
-      
-         p(RAs[ra]["ra_name"] + " Parsed")
-      else:
-         p(".... Skipped", True)
-
+      p(RAs[ra]["ra_name"] + " Parsed")
 
    for leafID in entityList:
       leafKeys = entityList[leafID]['base']['keys']

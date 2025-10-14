@@ -71,3 +71,6 @@ def fetchFile(url, file_path, overwrite=True):
   except:
     p("ERROR: Could not download URL: " + url)
     return False
+  
+def safeFileName(name):
+   return name.replace('https://','').replace('http://','').replace('/','').replace('.','_')
