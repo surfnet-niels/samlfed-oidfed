@@ -1,9 +1,0 @@
-{
-    "use_edugain_api": false,
-    "edugain_ra_url": "https://www.edugain.org",
-    "edugain_fed_api": "https://technical.edugain.org/api.php?action=list_feds_full",
-    "ra_file": "RAs.json",
-    "use_RAs": ["http://www.surfconext.nl/"],
-    "default_language": "en",
-    "leaf_base_url": "https://leafs.oidf.lab.surf.nl/"
-}
