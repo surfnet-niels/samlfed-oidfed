@@ -3,3 +3,5 @@ feeds/
 logs/
 __pycache__/
 config/local_config.json
+config/testbed_config.json
+config/leafs_config.json
