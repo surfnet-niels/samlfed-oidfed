@@ -72,20 +72,17 @@ def main(argv):
     INPUT_PATH = ROOTPATH + '/feeds/'
     OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
     KEYS_PATH = TESTBED_PATH + '/keys/'
-    TESTBED_BASEURL= 'oidf.lab.surf.nl'
     DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
+    # Fetch edugain RAs from edugain technical site via URL (True) or use static file (False)?
+    FETCHEDUGAINURL = False
 
     # a local file contains all the secrets we need to keep secure. The template for this file is found in config/local.json.template
-    localConf = CONFIG_PATH + 'local_config.json'
+    localConf = CONFIG_PATH + 'testbed_config.json'
     config = loadJSON(localConf)
     pj(config)
     EMAIL = config["email"]
-
-    EDUGAIN_RA_URI = 'https://www.edugain.org'
-
-    ENROLLLEAFS = False
-    # Fetch edugain RAs from edugain technical site via URL (True) or use static file (False)?
-    FETCHEDUGAINURL = True
+    EDUGAIN_RA_URI = config["edugain_ra_url"]
+    TESTBED_BASEURL= config["testbed_baseurl"]
 
     #
     # Deployment Configuration
@@ -94,24 +91,27 @@ def main(argv):
     if FETCHEDUGAINURL:
         edugainFedsURL = 'https://technical.edugain.org/api.php?action=list_feds_full'
         allFeds = getFeds(edugainFedsURL, INPUT_PATH)
-    else:
-        allFeds = loadJSON(INPUT_PATH + 'allfeds.json')
+        raConf = parseFeds(allFeds, [], TESTBED_BASEURL)
 
+        # Add eduGAIN as a TA
+        # ToDo: move to config
+        raConf["edugain"] = {
+            "display_name": 'eduGAIN',
+            "name":  'edugain',
+            "reg_auth": '',
+            "country_code": '',
+            "md_url": '',
+            "ta_url": 'https://edugain.oidf.lab.surf.nl',
+            "subordinates": []
+        }
+    else:
+        # Configure TAs
+        #
+        raConf=loadJSON("config/ta/config.json")
+    
     # Read Feds into Config, Optionally provide an array of Fed names to include
     #raConf = parseFeds(allFeds, ['IDEM', 'SURFCONEXT', 'HAKA'], TESTBED_BASEURL)
-    raConf = parseFeds(allFeds, [], TESTBED_BASEURL)
-
-    # Add eduGAIN as a TA
-    # ToDo: move to config
-    raConf["edugain"] = {
-        "display_name": 'eduGAIN',
-        "name":  'edugain',
-        "reg_auth": '',
-        "country_code": '',
-        "md_url": '',
-        "ta_url": 'https://edugain.oidf.lab.surf.nl',
-        "subordinates": []
-    }
+    #raConf = parseFeds(allFeds, [], TESTBED_BASEURL)
 
     #
     # Configure TEST RPs
@@ -131,12 +131,12 @@ def main(argv):
     # Specials
 
     # eduGAIN has all national feds as its subordinates
-    for ta in raConf.keys():
-        raConf["edugain"]["subordinates"].append(expandTestbedURL(ta,TESTBED_BASEURL))
+    #for ta in raConf.keys():
+    #    raConf["edugain"]["subordinates"].append(expandTestbedURL(ta,TESTBED_BASEURL))
 
     # The global RP is a member of all federations, hence has all as TA and authority hint
-    for ta in raConf.keys():
-        rpConf["global-rp"]["tas"].append(ta)
+    #for ta in raConf.keys():
+    #    rpConf["global-rp"]["tas"].append(ta)
 
     #
     # Make sure we have all config dirs
@@ -376,7 +376,7 @@ def main(argv):
 
         else:
             # for now all Tas have eduGAIN as the parent
-            ta.add_authority_hint(raConf["edugain"]['ta_url'])
+            #ta.add_authority_hint(raConf["edugain"]['ta_url'])
 
             # Add TMOs to the TAs
             for tmo in tmoConf:
