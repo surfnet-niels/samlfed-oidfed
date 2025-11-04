@@ -1,0 +1,16 @@
+{
+    "edugain": {
+        "name": "eduGAIN Membership Trustmark Issuer",
+        "url": "edugain",
+        "tas": [],
+        "trust_mark_ids": ["https://edugain.org/member"],
+        "tmi_type": "ta"
+    },
+    "surfconext": {
+        "name": "SURFconext",
+        "url": "https://www.surfconext.nl",
+        "tas": ["surfconext"],
+        "trust_mark_ids": ["https://surfconext.nl/member"],
+        "tmi_type": "standalone"
+    }
+}

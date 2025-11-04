@@ -1,0 +1,11 @@
+{
+    "surfconext": {
+        "display_name": "SURFconext",
+        "name":  "surfconext",
+        "reg_auth": "",
+        "country_code": "nl",
+        "md_url": "",
+        "ta_url": "https://ta.dev.oidf.lab.surfconext.nl",
+        "subordinates": []
+    }
+}

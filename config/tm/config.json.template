@@ -1,0 +1,16 @@
+{
+    "https://edugain.org/member": {
+        "name": "eduGAIN Membership",
+        "issuer": "edugain",
+        "logo_uri": "https://edugain.org/wp-content/uploads/2018/02/eduGAIN.jpg",
+        "ref": "https://www.edugain.org",
+        "lifetime": 86400
+    },
+    "https://surfconext.nl/member": {
+        "name": "SURFconext Membership",
+        "issuer": "surfconext",
+        "logo_uri": "https://merkportaal.surf.nl/wp-content/uploads/2022/09/image-4.png",
+        "ref": "https://www.surfconext.nl",
+        "lifetime": 86400
+    }        
+}
