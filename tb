@@ -1,3 +1,5 @@
 #! /bin/bash
 
-/usr/bin/python3 ./mkOIDCfedTestbed.py
+#/usr/bin/python3 ./mkOIDCfedTestbed.py
+docker run -it --rm --name mk-oidf-testbed -v "$PWD":/app -w /app saml-oidf /usr/bin/python3 mkOIDCfedTestbed.py
+

@@ -13,8 +13,14 @@ import urllib.request
 from pathlib import Path
 
 def loadJSON(json_file):
-   with open(json_file) as json_file:
-     return json.load(json_file)
+   try:
+      with open(json_file) as json_file:
+         return json.load(json_file)
+   except FileNotFoundError:
+      p("WARN: File " + json_file + " was not found", True)
+      return {}
+   except:
+      p("ERROR: Error occured while etrying to read file " + json_file, False)
 
 def p(message, writetolog=True):
    if writetolog:
