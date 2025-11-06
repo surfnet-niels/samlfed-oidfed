@@ -79,13 +79,13 @@ def main(argv):
     pj(config)
 
     EMAIL = config["email"]
-#    EDUGAIN_RA_URI = config["edugain_ra_url"]
     TESTBED_BASEURL= config["testbed_baseurl"]
     ACME_CA=config["acme_ca"]
     KEY_ID=config["key_id"]
     MAC_KEY=config["mac_key"]
     DOCKER_CONTAINER_NAME = config["docker_container_name_template"]
-
+    FETCHEDUGAINURL = config["load_edugain_ras"]
+    
     #
     # Deployment Configuration
     # Load RAs from eduGAIN
