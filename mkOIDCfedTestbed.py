@@ -72,17 +72,19 @@ def main(argv):
     INPUT_PATH = ROOTPATH + '/feeds/'
     OUTPUT_PATH = ROOTPATH + '/var/www/oidcfed/'
     KEYS_PATH = TESTBED_PATH + '/keys/'
-    DOCKER_CONTAINER_NAME = "testbed-~~container_name~~-1"
-    # Fetch edugain RAs from edugain technical site via URL (True) or use static file (False)?
-    FETCHEDUGAINURL = False
-
+    
     # a local file contains all the secrets we need to keep secure. The template for this file is found in config/local.json.template
     localConf = CONFIG_PATH + 'testbed_config.json'
     config = loadJSON(localConf)
     pj(config)
+
     EMAIL = config["email"]
-    EDUGAIN_RA_URI = config["edugain_ra_url"]
+#    EDUGAIN_RA_URI = config["edugain_ra_url"]
     TESTBED_BASEURL= config["testbed_baseurl"]
+    ACME_CA=config["acme_ca"]
+    KEY_ID=config["key_id"]
+    MAC_KEY=config["mac_key"]
+    DOCKER_CONTAINER_NAME = config["docker_container_name_template"]
 
     #
     # Deployment Configuration
