@@ -1,14 +1,10 @@
 {
     "testbed_baseurl": "oidf.lab.surf.nl",
     "use_letsencrypt": false,
-    "acme_ca": "https://acme-v02.harica.gr/acme/****************/directory",
-    "acme_eab": {
-        "key_id": "",
-        "mac_key": "",
-    },
+    "acme_ca": "",
+    "key_id": "",
+    "mac_key": "",
     "email": "",
     "docker_container_name_template": "testbed-~~container_name~~-1",
     "edugain_ra_url": "https://www.edugain.org"
-
-
 }
