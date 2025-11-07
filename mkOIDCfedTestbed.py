@@ -449,8 +449,8 @@ def main(argv):
     email '''+ EMAIL +'''
     acme_ca '''+ config["acme_ca"] +'''
     acme_eab {
-        key_id '''+ config["acme_eab"]["key_id"] +'''
-        mac_key '''+ config["acme_eab"]["mac_key"] +'''
+        key_id '''+ config["key_id"] +'''
+        mac_key '''+ config["mac_key"] +'''
     }
 }
     ''')
