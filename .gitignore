@@ -2,4 +2,4 @@ testbed/
 feeds/
 logs/
 __pycache__/
-config/
+/config

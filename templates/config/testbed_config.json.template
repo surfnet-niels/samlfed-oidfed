@@ -6,5 +6,5 @@
     "mac_key": "",
     "email": "",
     "docker_container_name_template": "testbed-~~container_name~~-1",
-    "edugain_ra_url": "https://www.edugain.org"
+    "load_edugain_ras": false
 }
